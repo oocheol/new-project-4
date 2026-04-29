@@ -17,7 +17,7 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: han-studio-db
-          property: jdbcConnectionString
+          property: connectionString
       - key: DATABASE_USERNAME
         fromDatabase:
           name: han-studio-db
