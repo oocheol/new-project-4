@@ -15,6 +15,7 @@ services:
       - key: ALLOWED_ORIGINS
         value: https://web-seven-iota-63.vercel.app
       - key: SPRING_DATASOURCE_URL
+        value: "${SPRING_DATASOURCE_URL}?sslmode=require"
         fromDatabase:
           name: han-studio-db
           property: jdbcConnectionString
