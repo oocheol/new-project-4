@@ -8,7 +8,6 @@ services:
   - type: web
     name: han-studio-api
     runtime: docker
-    rootDir: apps/api
     plan: free
     dockerfilePath: apps/api/Dockerfile
     dockerContext: apps/api
