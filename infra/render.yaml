@@ -14,18 +14,12 @@ services:
     envVars:
       - key: ALLOWED_ORIGINS
         value: https://web-seven-iota-63.vercel.app
-      - key: DB_HOST
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_DATASOURCE_URL
         fromDatabase:
           name: han-studio-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: han-studio-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: han-studio-db
-          property: database
+          property: jdbcConnectionString
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: han-studio-db
@@ -34,5 +28,3 @@ services:
         fromDatabase:
           name: han-studio-db
           property: password
-      - key: SPRING_JPA_DATABASE_PLATFORM
-        value: org.hibernate.dialect.PostgreSQLDialect
