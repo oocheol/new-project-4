@@ -10,7 +10,17 @@ spring:
     url: ${DATABASE_URL:jdbc:h2:file:./data/han-studio;MODE=PostgreSQL}
     username: ${DATABASE_USERNAME:sa}
     password: ${DATABASE_PASSWORD:}
+    driver-class-name: ${JDBC_DRIVER:org.h2.Driver}
   jpa:
+    database-platform: ${DB_PLATFORM:org.hibernate.dialect.H2Dialect}
     hibernate:
       ddl-auto: update
     open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        # Ensure SSL is used for PostgreSQL if needed
+        temp:
+          use_jdbc_metadata_defaults: false
