@@ -7,7 +7,7 @@ app:
 
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./data/han-studio;MODE=PostgreSQL}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:han_studio}?sslmode=require}
     username: ${SPRING_DATASOURCE_USERNAME:sa}
     password: ${SPRING_DATASOURCE_PASSWORD:}
   jpa:
@@ -21,3 +21,12 @@ spring:
             non_contextual_creation: true
         temp:
           use_jdbc_metadata_defaults: false
+          
+---
+spring:
+  config:
+    activate:
+      on-profile: default
+  datasource:
+    url: jdbc:h2:file:./data/han-studio;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver

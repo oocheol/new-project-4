@@ -14,11 +14,18 @@ services:
     envVars:
       - key: ALLOWED_ORIGINS
         value: https://web-seven-iota-63.vercel.app
-      - key: SPRING_DATASOURCE_URL
-        value: "${SPRING_DATASOURCE_URL}?sslmode=require"
+      - key: DB_HOST
         fromDatabase:
           name: han-studio-db
-          property: jdbcConnectionString
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: han-studio-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: han-studio-db
+          property: database
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: han-studio-db
