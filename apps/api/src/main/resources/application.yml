@@ -12,7 +12,6 @@ spring:
     password: ${DATABASE_PASSWORD:}
     driver-class-name: ${JDBC_DRIVER:org.h2.Driver}
   jpa:
-    database-platform: ${DB_PLATFORM:org.hibernate.dialect.H2Dialect}
     hibernate:
       ddl-auto: update
     open-in-view: false
@@ -21,6 +20,5 @@ spring:
         jdbc:
           lob:
             non_contextual_creation: true
-        # Ensure SSL is used for PostgreSQL if needed
         temp:
           use_jdbc_metadata_defaults: false

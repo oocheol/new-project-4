@@ -20,7 +20,20 @@ public class StarterApiApplication {
     }
 
     URI uri = URI.create(databaseUrl);
-    String jdbcUrl = "jdbc:postgresql://" + uri.getHost() + ":" + uri.getPort() + uri.getPath();
+    int port = uri.getPort();
+    String host = uri.getHost();
+    String path = uri.getPath();
+    
+    String jdbcUrl = String.format("jdbc:postgresql://%s%s%s", 
+        host, 
+        (port == -1 ? "" : ":" + port), 
+        path);
+    
+    // Add sslmode=require for Render PostgreSQL if not present
+    if (!jdbcUrl.contains("sslmode")) {
+        jdbcUrl += (jdbcUrl.contains("?") ? "&" : "?") + "sslmode=require";
+    }
+    
     String userInfo = uri.getUserInfo();
 
     System.setProperty("spring.datasource.url", jdbcUrl);
