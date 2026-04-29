@@ -21,7 +21,7 @@ This repository is intentionally split by deploy target so future AI work can st
 ## Current Stack
 
 - Web: Vite with plain JavaScript modules
-- API: Spring Boot 2.7.x on Java 11+
+- API: Spring Boot 2.7.x on Java 11+ with Gradle
 - DB: PostgreSQL, intended for Supabase
 - Hosting: Vercel for web, Render for API
 

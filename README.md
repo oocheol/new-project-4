@@ -30,7 +30,7 @@ Backend:
 
 ```bash
 cd apps/api
-mvn spring-boot:run
+gradle bootRun
 ```
 
 The frontend reads `VITE_API_BASE_URL`. The backend reads PostgreSQL settings from `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD`.
