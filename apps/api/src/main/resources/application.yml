@@ -1,0 +1,16 @@
+server:
+  port: ${PORT:8080}
+
+app:
+  cors:
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173}
+
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:mem:starter;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
