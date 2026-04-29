@@ -10,7 +10,8 @@ services:
     runtime: docker
     rootDir: apps/api
     plan: free
-    dockerfilePath: ./Dockerfile
+    dockerfilePath: apps/api/Dockerfile
+    dockerContext: apps/api
     envVars:
       - key: ALLOWED_ORIGINS
         value: https://web-seven-iota-63.vercel.app
