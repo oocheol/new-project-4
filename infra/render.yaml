@@ -1,16 +1,20 @@
+databases:
+  - name: han-studio-db
+    plan: free
+    databaseName: han_studio
+    user: han_studio
+
 services:
   - type: web
-    name: java-api
+    name: han-studio-api
     runtime: docker
     rootDir: apps/api
     plan: free
     dockerfilePath: ./Dockerfile
     envVars:
       - key: ALLOWED_ORIGINS
-        sync: false
+        value: https://web-seven-iota-63.vercel.app
       - key: DATABASE_URL
-        sync: false
-      - key: DATABASE_USERNAME
-        sync: false
-      - key: DATABASE_PASSWORD
-        sync: false
+        fromDatabase:
+          name: han-studio-db
+          property: connectionString
