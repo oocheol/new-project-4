@@ -25,13 +25,20 @@ export function getHealth() {
   return request("/api/health");
 }
 
-export function listNotes() {
-  return request("/api/notes");
+export function getStudio() {
+  return request("/api/studio");
 }
 
-export function createNote(title, body) {
-  return request("/api/notes", {
+export function createInquiry(inquiry) {
+  return request("/api/inquiries", {
     method: "POST",
-    body: JSON.stringify({ title, body })
+    body: JSON.stringify(inquiry)
+  });
+}
+
+export function createPortfolioPhoto(photo) {
+  return request("/api/portfolio", {
+    method: "POST",
+    body: JSON.stringify(photo)
   });
 }

@@ -1,10 +1,16 @@
-# Java API + JS Web Starter
+# Han Studio Wedding Platform
 
-Java Spring Boot backend, JavaScript Vite frontend, and PostgreSQL-ready configuration for a free-tier deployment path:
+웨딩 사진을 보고 마음에 맞는 소속 작가를 선택해 상담을 남기는 스튜디오 플랫폼입니다.
 
-- Frontend: Vercel
-- Backend: Render
-- Database: Supabase PostgreSQL
+- Frontend: Vite JavaScript single-page app
+- Backend: Spring Boot REST API
+- Database: local persistent H2 by default, PostgreSQL-ready for deployment
+
+## Product Flow
+
+1. 커플은 한 스튜디오 포트폴리오 사진을 둘러봅니다.
+2. 마음에 드는 사진이나 작가를 선택합니다.
+3. 촬영일, 선호 무드, 연락처를 남기면 상담 요청이 DB에 저장됩니다.
 
 ## Project Map
 
@@ -33,7 +39,16 @@ cd apps/api
 gradle bootRun
 ```
 
-The frontend reads `VITE_API_BASE_URL`. The backend reads PostgreSQL settings from `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD`.
+The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/han-studio` by default so local data persists across restarts. For PostgreSQL, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD`.
+
+## Main API
+
+- `GET /api/studio`: photographers and portfolio photos
+- `GET /api/photographers`: studio photographers
+- `GET /api/portfolio`: portfolio photos
+- `POST /api/portfolio`: save a new portfolio photo URL
+- `POST /api/inquiries`: save a booking inquiry
+- `GET /api/inquiries`: saved inquiries
 
 ## Deployment
 
