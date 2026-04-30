@@ -13,6 +13,8 @@ SPRING_DATASOURCE_PASSWORD=<supabase-db-password>
 ALLOWED_ORIGINS=https://<your-vercel-domain>
 ```
 
+Render Blueprint `connectionString` values use `postgresql://...`; the API converts those values to `jdbc:postgresql://...` automatically.
+
 ## 2. Render Backend
 
 Create a new Web Service from this repository.

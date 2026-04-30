@@ -17,7 +17,7 @@ services:
       - key: SPRING_DATASOURCE_URL
         fromDatabase:
           name: han-studio-db
-          property: jdbcConnectionString
+          property: connectionString
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase:
           name: han-studio-db
