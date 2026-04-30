@@ -47,6 +47,8 @@ Frontend environment variable:
 VITE_API_BASE_URL=https://<your-render-service>.onrender.com
 ```
 
+Do not set `VITE_API_BASE_URL` to the Vercel frontend URL. The value must point to the Spring Boot API service on Render.
+
 For automatic deploys, confirm Project Settings > Git has the GitHub repository connected and that Ignored Build Step is empty unless you intentionally skip builds.
 
 ## 4. Free-Tier Notes
