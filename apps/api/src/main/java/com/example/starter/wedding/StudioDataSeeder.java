@@ -18,11 +18,10 @@ public class StudioDataSeeder implements CommandLineRunner {
 
   @Override
   public void run(String... args) {
-    if (photographerRepository.count() > 0) {
-      return;
-    }
-
-    Photographer yuna = photographerRepository.save(new Photographer(
+    Photographer yuna = photographerRepository.findAllByOrderByNameAsc().stream()
+        .filter(photographer -> "한유나".equals(photographer.getName()))
+        .findFirst()
+        .orElseGet(() -> photographerRepository.save(new Photographer(
         "한유나",
         "Lead Photographer",
         "부드러운 자연광과 작은 표정을 오래 남기는 작가입니다.",
@@ -30,9 +29,12 @@ public class StudioDataSeeder implements CommandLineRunner {
         "서울 / 경기",
         9,
         850000,
-        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80"));
+        "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=900&q=80")));
 
-    Photographer minjun = photographerRepository.save(new Photographer(
+    Photographer minjun = photographerRepository.findAllByOrderByNameAsc().stream()
+        .filter(photographer -> "서민준".equals(photographer.getName()))
+        .findFirst()
+        .orElseGet(() -> photographerRepository.save(new Photographer(
         "서민준",
         "Editorial Photographer",
         "영화적인 구도와 차분한 컬러로 한 장면 같은 웨딩을 만듭니다.",
@@ -40,9 +42,12 @@ public class StudioDataSeeder implements CommandLineRunner {
         "전국 출장",
         7,
         980000,
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80"));
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=900&q=80")));
 
-    Photographer hae = photographerRepository.save(new Photographer(
+    Photographer hae = photographerRepository.findAllByOrderByNameAsc().stream()
+        .filter(photographer -> "정하은".equals(photographer.getName()))
+        .findFirst()
+        .orElseGet(() -> photographerRepository.save(new Photographer(
         "정하은",
         "Film Mood Photographer",
         "필름 질감, 우드톤 공간, 담백한 포즈를 좋아하는 커플에게 잘 맞습니다.",
@@ -50,7 +55,11 @@ public class StudioDataSeeder implements CommandLineRunner {
         "서울 / 제주",
         6,
         780000,
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80"));
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=900&q=80")));
+
+    if (portfolioPhotoRepository.count() > 0) {
+      return;
+    }
 
     portfolioPhotoRepository.save(new PortfolioPhoto(
         "오전의 우드 스튜디오",

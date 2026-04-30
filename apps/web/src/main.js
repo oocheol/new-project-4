@@ -1,16 +1,28 @@
-import { createInquiry, createPortfolioPhoto, getHealth, getStudio } from "./api.js";
+import {
+  createInquiry,
+  createPortfolioPhoto,
+  getHealth,
+  getStudio,
+  listInquiries,
+  recommendPhoto,
+  recordPhotoView
+} from "./api.js";
 import "./styles.css";
 
 const app = document.querySelector("#app");
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || "admin1234";
 
 const state = {
   health: "checking",
+  screen: "feed",
   photographers: [],
   photos: [],
+  inquiries: [],
+  selectedPhotoId: null,
   selectedPhotographerId: null,
-  selectedMood: "all",
-  inquiryStatus: "",
-  photoStatus: "",
+  adminAuthed: sessionStorage.getItem("adminAuthed") === "true",
+  likedPhotoIds: new Set(JSON.parse(localStorage.getItem("likedPhotoIds") || "[]")),
+  message: "",
   error: ""
 };
 
@@ -59,6 +71,8 @@ const fallbackPhotos = [
     season: "Spring",
     imageUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1400&q=82",
     featured: true,
+    viewCount: 128,
+    recommendationCount: 32,
     photographer: fallbackPhotographers[0]
   },
   {
@@ -69,6 +83,8 @@ const fallbackPhotos = [
     season: "Winter",
     imageUrl: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?auto=format&fit=crop&w=1400&q=82",
     featured: true,
+    viewCount: 92,
+    recommendationCount: 24,
     photographer: fallbackPhotographers[2]
   },
   {
@@ -79,258 +95,326 @@ const fallbackPhotos = [
     season: "Autumn",
     imageUrl: "https://images.unsplash.com/photo-1529636798458-92182e662485?auto=format&fit=crop&w=1400&q=82",
     featured: false,
-    photographer: fallbackPhotographers[1]
-  },
-  {
-    id: 4,
-    title: "화이트 드레스 포트레이트",
-    mood: "classic",
-    venue: "Han Studio White Room",
-    season: "Summer",
-    imageUrl: "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&w=1400&q=82",
-    featured: false,
-    photographer: fallbackPhotographers[0]
-  },
-  {
-    id: 5,
-    title: "필름 컬러 세레모니",
-    mood: "film",
-    venue: "Jeju Garden",
-    season: "Spring",
-    imageUrl: "https://images.unsplash.com/photo-1469371670807-013ccf25f16a?auto=format&fit=crop&w=1400&q=82",
-    featured: false,
-    photographer: fallbackPhotographers[2]
-  },
-  {
-    id: 6,
-    title: "나무 테이블 위 부케",
-    mood: "detail",
-    venue: "Han Studio Lounge",
-    season: "Autumn",
-    imageUrl: "https://images.unsplash.com/photo-1523438885200-e635ba2c371e?auto=format&fit=crop&w=1400&q=82",
-    featured: false,
+    viewCount: 74,
+    recommendationCount: 18,
     photographer: fallbackPhotographers[1]
   }
 ];
 
 function render() {
-  const selectedPhotographer = getSelectedPhotographer();
-  const moods = ["all", ...new Set(state.photos.map((photo) => photo.mood))];
-  const filteredPhotos = state.selectedMood === "all"
-    ? state.photos
-    : state.photos.filter((photo) => photo.mood === state.selectedMood);
-
   app.innerHTML = `
-    <div class="app-shell">
-      <header class="topbar">
-        <a class="brand" href="#" aria-label="Han Studio home">
-          <span class="brand-mark">H</span>
-          <span>Han Studio</span>
-        </a>
-        <nav class="nav" aria-label="Primary navigation">
-          <a href="#portfolio">Portfolio</a>
-          <a href="#artists">Artists</a>
-          <a href="#booking">Booking</a>
-          <a href="#studio-admin">Admin</a>
-        </nav>
-        <span class="status status-${state.health}">API ${state.health}</span>
-      </header>
-
-      <main>
-        <section class="hero">
-          <div class="hero-copy">
-            <h1>사진을 보고, 마음에 맞는 작가를 고르는 웨딩 스튜디오</h1>
-            <p>한 스튜디오의 실제 포트폴리오를 둘러보고 원하는 무드의 사진과 작가를 선택해 촬영 상담을 남겨보세요.</p>
-            <div class="hero-actions">
-              <a class="button primary" href="#portfolio">사진 둘러보기</a>
-              <a class="button secondary" href="#booking">상담 남기기</a>
-            </div>
-          </div>
-          <div class="hero-board" aria-label="Featured wedding portfolio">
-            ${state.photos.slice(0, 3).map((photo, index) => `
-              <figure class="hero-photo hero-photo-${index + 1}">
-                <img src="${photo.imageUrl}" alt="${escapeHtml(photo.title)}" />
-                <figcaption>
-                  <strong>${escapeHtml(photo.title)}</strong>
-                  <span>${escapeHtml(photo.photographer.name)}</span>
-                </figcaption>
-              </figure>
-            `).join("")}
-          </div>
-        </section>
-
-        <section class="section-grid" id="portfolio">
-          <div class="section-heading">
-            <h2>Studio Portfolio</h2>
-            <p>화이트 우드 톤의 실내, 자연광, 필름 무드, 도심 로케이션까지 원하는 분위기로 좁혀보세요.</p>
-          </div>
-          <div class="mood-tabs" role="tablist" aria-label="Filter portfolio by mood">
-            ${moods.map((mood) => `
-              <button class="tab ${state.selectedMood === mood ? "active" : ""}" data-mood="${escapeHtml(mood)}" type="button">
-                ${moodLabel(mood)}
-              </button>
-            `).join("")}
-          </div>
-          <div class="portfolio-grid">
-            ${filteredPhotos.length ? filteredPhotos.map((photo) => `
-                <article class="photo-card ${state.selectedPhotographerId === photo.photographer.id ? "selected" : ""}">
-                  <button class="photo-select" type="button" data-photographer-id="${photo.photographer.id}" aria-label="${escapeHtml(photo.photographer.name)} 작가 선택">
-                    <img src="${photo.imageUrl}" alt="${escapeHtml(photo.title)}" />
-                    <span class="photo-meta">
-                      <strong>${escapeHtml(photo.title)}</strong>
-                      <small>${escapeHtml(photo.venue)} / ${escapeHtml(photo.season)}</small>
-                    </span>
-                    <span class="photo-artist">${escapeHtml(photo.photographer.name)}</span>
-                  </button>
-                </article>
-              `).join("")
-              : `<p class="empty-state">이 무드에 등록된 사진이 아직 없습니다.</p>`}
-          </div>
-        </section>
-
-        <section class="artists" id="artists">
-          <div class="section-heading">
-            <h2>Photographers</h2>
-            <p>포트폴리오에서 마음에 든 사진을 누르면 해당 작가가 선택됩니다.</p>
-          </div>
-          <div class="artist-list">
-            ${state.photographers.map((photographer) => `
-              <article class="artist ${state.selectedPhotographerId === photographer.id ? "active" : ""}">
-                <button class="artist-button" type="button" data-photographer-id="${photographer.id}">
-                  <img src="${photographer.portraitUrl}" alt="${escapeHtml(photographer.name)} portrait" />
-                  <span class="artist-copy">
-                    <strong>${escapeHtml(photographer.name)}</strong>
-                    <small>${escapeHtml(photographer.role)}</small>
-                    <span>${escapeHtml(photographer.bio)}</span>
-                  </span>
-                  <span class="artist-facts">
-                    <span>${escapeHtml(photographer.style)}</span>
-                    <span>${photographer.experienceYears}년</span>
-                    <span>${formatPrice(photographer.startingPrice)}부터</span>
-                  </span>
-                </button>
-              </article>
-            `).join("")}
-          </div>
-        </section>
-
-        <section class="booking" id="booking">
-          <div class="booking-summary">
-            <h2>Booking Inquiry</h2>
-            <p>선택한 작가에게 촬영 상담 요청을 남기면 DB에 저장됩니다.</p>
-            <div class="selected-artist">
-              ${selectedPhotographer ? `
-                <img src="${selectedPhotographer.portraitUrl}" alt="${escapeHtml(selectedPhotographer.name)} portrait" />
-                <div>
-                  <strong>${escapeHtml(selectedPhotographer.name)}</strong>
-                  <span>${escapeHtml(selectedPhotographer.style)} / ${escapeHtml(selectedPhotographer.location)}</span>
-                </div>
-              ` : `<span>작가를 선택해주세요.</span>`}
-            </div>
-            ${state.error ? `<p class="error">${escapeHtml(state.error)}</p>` : ""}
-            ${state.inquiryStatus ? `<p class="success">${escapeHtml(state.inquiryStatus)}</p>` : ""}
-          </div>
-
-          <form class="booking-form" id="booking-form">
-            <input type="hidden" name="photographerId" value="${selectedPhotographer ? selectedPhotographer.id : ""}" />
-            <label>
-              <span>두 분 성함</span>
-              <input name="coupleName" placeholder="예: 김하나 & 이도윤" required />
-            </label>
-            <label>
-              <span>연락처</span>
-              <input name="phone" placeholder="010-0000-0000" required />
-            </label>
-            <label>
-              <span>이메일</span>
-              <input name="email" type="email" placeholder="hello@hanstudio.kr" required />
-            </label>
-            <label>
-              <span>희망 촬영일</span>
-              <input name="weddingDate" type="date" required />
-            </label>
-            <label>
-              <span>원하는 무드</span>
-              <select name="preferredMood" required>
-                <option value="Natural Light">Natural Light</option>
-                <option value="Editorial">Editorial</option>
-                <option value="Film Mood">Film Mood</option>
-                <option value="Classic">Classic</option>
-              </select>
-            </label>
-            <label class="full">
-              <span>남기고 싶은 이야기</span>
-              <textarea name="message" rows="5" placeholder="좋아하는 사진, 장소, 예산, 두 분의 분위기를 알려주세요." required></textarea>
-            </label>
-            <button class="submit" type="submit" ${selectedPhotographer ? "" : "disabled"}>상담 요청 저장</button>
-          </form>
-        </section>
-
-        <section class="admin" id="studio-admin">
-          <div class="section-heading">
-            <h2>Studio Admin</h2>
-            <p>촬영한 신혼부부 사진 파일을 선택하면 포트폴리오 DB에 저장되고 화면에 바로 반영됩니다.</p>
-          </div>
-          ${state.photoStatus ? `<p class="success admin-status">${escapeHtml(state.photoStatus)}</p>` : ""}
-          <form class="admin-form" id="photo-form">
-            <label>
-              <span>사진 제목</span>
-              <input name="title" placeholder="예: 햇살 아래 첫 춤" required />
-            </label>
-            <label>
-              <span>담당 작가</span>
-              <select name="photographerId" required>
-                ${state.photographers.map((photographer) => `
-                  <option value="${photographer.id}">${escapeHtml(photographer.name)} / ${escapeHtml(photographer.style)}</option>
-                `).join("")}
-              </select>
-            </label>
-            <label>
-              <span>무드</span>
-              <input name="mood" placeholder="예: natural" required />
-            </label>
-            <label>
-              <span>촬영 장소</span>
-              <input name="venue" placeholder="예: Han Studio Room B" required />
-            </label>
-            <label>
-              <span>시즌</span>
-              <input name="season" placeholder="예: Spring" required />
-            </label>
-            <label class="file-field full">
-              <span>사진 파일</span>
-              <input name="imageFile" type="file" accept="image/*" required />
-              <small>JPG, PNG, WebP 이미지를 선택하면 저장 전에 화면용 크기로 자동 압축됩니다.</small>
-            </label>
-            <label class="checkbox full">
-              <input name="featured" type="checkbox" />
-              <span>대표 사진으로 표시</span>
-            </label>
-            <button class="submit" type="submit">포트폴리오 사진 저장</button>
-          </form>
-        </section>
+    <div class="mobile-app">
+      ${renderTopbar()}
+      <main class="screen">
+        ${renderStatus()}
+        ${renderScreen()}
       </main>
+      ${renderBottomNav()}
     </div>
   `;
 
-  document.querySelectorAll("[data-photographer-id]").forEach((button) => {
+  bindEvents();
+}
+
+function renderTopbar() {
+  return `
+    <header class="topbar">
+      <button class="icon-button" data-screen="feed" type="button" aria-label="홈">H</button>
+      <div>
+        <strong>Han Studio</strong>
+        <span>Wedding photo feed</span>
+      </div>
+      <button class="admin-link" data-screen="admin" type="button">관리자</button>
+    </header>
+  `;
+}
+
+function renderStatus() {
+  return `
+    <div class="notice-row">
+      <span class="status status-${state.health}">API ${state.health}</span>
+      ${state.message ? `<span class="success">${escapeHtml(state.message)}</span>` : ""}
+      ${state.error ? `<span class="error">${escapeHtml(state.error)}</span>` : ""}
+    </div>
+  `;
+}
+
+function renderScreen() {
+  if (state.screen === "detail") {
+    return renderPhotoDetail();
+  }
+
+  if (state.screen === "booking") {
+    return renderBooking();
+  }
+
+  if (state.screen === "admin") {
+    return state.adminAuthed ? renderAdmin() : renderAdminLogin();
+  }
+
+  return renderFeed();
+}
+
+function renderFeed() {
+  return `
+    <section class="feed">
+      <div class="feed-heading">
+        <h1>사진으로 고르는 웨딩 작가</h1>
+        <p>마음에 드는 사진을 누르면 촬영한 작가 프로필과 예약 문의를 바로 볼 수 있습니다.</p>
+      </div>
+      <div class="photo-feed">
+        ${state.photos.map((photo) => `
+          <article class="feed-card">
+            <button class="photo-open" data-photo-id="${photo.id}" type="button">
+              <img src="${photo.imageUrl}" alt="${escapeHtml(photo.title)}" />
+            </button>
+            <div class="feed-card-meta">
+              <button class="artist-chip" data-photo-id="${photo.id}" type="button">
+                <img src="${photo.photographer.portraitUrl}" alt="" />
+                <span>
+                  <strong>${escapeHtml(photo.photographer.name)}</strong>
+                  <small>${escapeHtml(photo.photographer.style)}</small>
+                </span>
+              </button>
+              <button class="recommend small-action ${state.likedPhotoIds.has(photo.id) ? "active" : ""}" data-recommend-id="${photo.id}" type="button">
+                추천 ${count(photo.recommendationCount)}
+              </button>
+            </div>
+            <div class="metric-row">
+              <span>조회 ${count(photo.viewCount)}</span>
+              <span>${escapeHtml(photo.venue)}</span>
+              <span>${escapeHtml(photo.mood)}</span>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderPhotoDetail() {
+  const photo = getSelectedPhoto();
+  if (!photo) {
+    return `<section class="empty-panel"><p>사진을 찾을 수 없습니다.</p></section>`;
+  }
+
+  return `
+    <section class="detail-view">
+      <button class="back-button" data-screen="feed" type="button">← 피드로</button>
+      <article class="detail-photo">
+        <img src="${photo.imageUrl}" alt="${escapeHtml(photo.title)}" />
+        <div class="detail-actions">
+          <button class="recommend ${state.likedPhotoIds.has(photo.id) ? "active" : ""}" data-recommend-id="${photo.id}" type="button">
+            추천하기
+          </button>
+          <button class="primary-action" data-screen="booking" data-photographer-id="${photo.photographer.id}" type="button">
+            이 작가 예약 문의
+          </button>
+        </div>
+      </article>
+
+      <section class="photo-copy">
+        <h1>${escapeHtml(photo.title)}</h1>
+        <div class="metric-row">
+          <span>조회 ${count(photo.viewCount)}</span>
+          <span>추천 ${count(photo.recommendationCount)}</span>
+          <span>${escapeHtml(photo.season)}</span>
+        </div>
+      </section>
+
+      ${renderPhotographerProfile(photo.photographer)}
+    </section>
+  `;
+}
+
+function renderPhotographerProfile(photographer) {
+  return `
+    <section class="profile-card">
+      <img src="${photographer.portraitUrl}" alt="${escapeHtml(photographer.name)} 프로필" />
+      <div>
+        <strong>${escapeHtml(photographer.name)}</strong>
+        <span>${escapeHtml(photographer.role)}</span>
+        <p>${escapeHtml(photographer.bio)}</p>
+        <div class="profile-facts">
+          <span>${escapeHtml(photographer.location)}</span>
+          <span>${photographer.experienceYears}년</span>
+          <span>${formatPrice(photographer.startingPrice)}부터</span>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderBooking() {
+  const photographer = getSelectedPhotographer();
+  return `
+    <section class="form-page">
+      <button class="back-button" data-screen="${state.selectedPhotoId ? "detail" : "feed"}" type="button">← 돌아가기</button>
+      <h1>예약 문의</h1>
+      ${photographer ? renderPhotographerProfile(photographer) : `<p>작가를 먼저 선택해주세요.</p>`}
+      <form class="stack-form" id="booking-form">
+        <input type="hidden" name="photographerId" value="${photographer ? photographer.id : ""}" />
+        <label>
+          <span>두 분 성함</span>
+          <input name="coupleName" placeholder="예: 김하나 & 이도윤" required />
+        </label>
+        <label>
+          <span>연락처</span>
+          <input name="phone" placeholder="010-0000-0000" required />
+        </label>
+        <label>
+          <span>이메일</span>
+          <input name="email" type="email" placeholder="hello@example.com" required />
+        </label>
+        <label>
+          <span>희망 촬영일</span>
+          <input name="weddingDate" type="date" required />
+        </label>
+        <label>
+          <span>원하는 무드</span>
+          <select name="preferredMood" required>
+            <option value="Natural Light">Natural Light</option>
+            <option value="Editorial">Editorial</option>
+            <option value="Film Mood">Film Mood</option>
+            <option value="Classic">Classic</option>
+          </select>
+        </label>
+        <label>
+          <span>문의 내용</span>
+          <textarea name="message" rows="5" placeholder="좋아하는 사진, 예산, 원하는 촬영 분위기를 알려주세요." required></textarea>
+        </label>
+        <button class="primary-action full" type="submit" ${photographer ? "" : "disabled"}>예약 문의 저장</button>
+      </form>
+    </section>
+  `;
+}
+
+function renderAdminLogin() {
+  return `
+    <section class="form-page">
+      <h1>관리자 로그인</h1>
+      <p class="helper">관리자는 예약 내역을 확인하고 작가 포트폴리오 사진을 추가할 수 있습니다.</p>
+      <form class="stack-form" id="admin-login-form">
+        <label>
+          <span>관리자 비밀번호</span>
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button class="primary-action full" type="submit">로그인</button>
+      </form>
+    </section>
+  `;
+}
+
+function renderAdmin() {
+  return `
+    <section class="admin-page">
+      <div class="admin-heading">
+        <div>
+          <h1>관리자</h1>
+          <p>예약 내역을 확인하고 작가들의 사진을 등록합니다.</p>
+        </div>
+        <button class="small-action" id="logout-admin" type="button">로그아웃</button>
+      </div>
+
+      <section class="admin-panel">
+        <h2>예약 내역</h2>
+        <button class="small-action" id="refresh-inquiries" type="button">새로고침</button>
+        <div class="inquiry-list">
+          ${state.inquiries.length ? state.inquiries.map((inquiry) => `
+            <article class="inquiry-card">
+              <strong>${escapeHtml(inquiry.coupleName)}</strong>
+              <span>${escapeHtml(inquiry.photographer.name)} / ${escapeHtml(inquiry.weddingDate)}</span>
+              <small>${escapeHtml(inquiry.phone)} · ${escapeHtml(inquiry.email)}</small>
+              <p>${escapeHtml(inquiry.message)}</p>
+            </article>
+          `).join("") : `<p class="empty-panel">예약 내역이 아직 없습니다.</p>`}
+        </div>
+      </section>
+
+      <section class="admin-panel">
+        <h2>사진 추가 등록</h2>
+        <form class="stack-form" id="photo-form">
+          <label>
+            <span>사진 제목</span>
+            <input name="title" required />
+          </label>
+          <label>
+            <span>담당 작가</span>
+            <select name="photographerId" required>
+              ${state.photographers.map((photographer) => `
+                <option value="${photographer.id}">${escapeHtml(photographer.name)} / ${escapeHtml(photographer.style)}</option>
+              `).join("")}
+            </select>
+          </label>
+          <label>
+            <span>무드</span>
+            <input name="mood" placeholder="예: natural" required />
+          </label>
+          <label>
+            <span>촬영 장소</span>
+            <input name="venue" required />
+          </label>
+          <label>
+            <span>시즌</span>
+            <input name="season" required />
+          </label>
+          <label class="file-field">
+            <span>사진 파일</span>
+            <input name="imageFile" type="file" accept="image/*" required />
+            <small>8MB 이하 이미지를 화면용 JPEG로 압축해 저장합니다.</small>
+          </label>
+          <label class="checkbox">
+            <input name="featured" type="checkbox" />
+            <span>대표 사진</span>
+          </label>
+          <button class="primary-action full" type="submit">사진 저장</button>
+        </form>
+      </section>
+    </section>
+  `;
+}
+
+function renderBottomNav() {
+  return `
+    <nav class="bottom-nav" aria-label="앱 이동">
+      <button class="${state.screen === "feed" ? "active" : ""}" data-screen="feed" type="button">피드</button>
+      <button data-screen="booking" type="button">예약</button>
+      <button class="${state.screen === "admin" ? "active" : ""}" data-screen="admin" type="button">관리자</button>
+    </nav>
+  `;
+}
+
+function bindEvents() {
+  document.querySelectorAll("[data-screen]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.selectedPhotographerId = Number(button.dataset.photographerId);
-      state.inquiryStatus = "";
-      render();
-      document.querySelector("#booking")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      const nextScreen = button.dataset.screen;
+      if (button.dataset.photographerId) {
+        state.selectedPhotographerId = Number(button.dataset.photographerId);
+      }
+      changeScreen(nextScreen);
     });
   });
 
-  document.querySelectorAll("[data-mood]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedMood = button.dataset.mood;
-      render();
+  document.querySelectorAll("[data-photo-id]").forEach((button) => {
+    button.addEventListener("click", () => openPhoto(Number(button.dataset.photoId)));
+  });
+
+  document.querySelectorAll("[data-recommend-id]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      recommend(Number(button.dataset.recommendId));
     });
   });
 
-  document.querySelector("#booking-form").addEventListener("submit", handleSubmit);
-  document.querySelector("#photo-form").addEventListener("submit", handlePhotoSubmit);
+  document.querySelector("#booking-form")?.addEventListener("submit", handleBookingSubmit);
+  document.querySelector("#admin-login-form")?.addEventListener("submit", handleAdminLogin);
+  document.querySelector("#photo-form")?.addEventListener("submit", handlePhotoSubmit);
+  document.querySelector("#refresh-inquiries")?.addEventListener("click", loadInquiries);
+  document.querySelector("#logout-admin")?.addEventListener("click", () => {
+    state.adminAuthed = false;
+    sessionStorage.removeItem("adminAuthed");
+    changeScreen("feed");
+  });
 }
 
 async function boot() {
@@ -339,33 +423,81 @@ async function boot() {
     state.health = health.status || "online";
     const studio = await getStudio();
     state.photographers = studio.photographers || [];
-    state.photos = studio.photos || [];
-    state.selectedPhotographerId = state.photographers[0]?.id || null;
+    state.photos = normalizePhotos(studio.photos || []);
   } catch (error) {
     state.health = "offline";
     state.photographers = fallbackPhotographers;
     state.photos = fallbackPhotos;
-    state.selectedPhotographerId = fallbackPhotographers[0].id;
     state.error = "백엔드 연결 전이라 미리보기 데이터로 표시 중입니다.";
   }
 
+  state.selectedPhotographerId = state.photographers[0]?.id || null;
   render();
 }
 
-async function handleSubmit(event) {
+function changeScreen(screen) {
+  state.screen = screen;
+  state.message = "";
+  state.error = "";
+  if (screen === "admin" && state.adminAuthed) {
+    loadInquiries();
+    return;
+  }
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function openPhoto(photoId) {
+  state.selectedPhotoId = photoId;
+  const photo = getSelectedPhoto();
+  state.selectedPhotographerId = photo?.photographer.id || state.selectedPhotographerId;
+  state.screen = "detail";
+  render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  try {
+    const updatedPhoto = await recordPhotoView(photoId);
+    replacePhoto(updatedPhoto);
+    render();
+  } catch {
+    bumpLocalPhoto(photoId, "viewCount");
+    render();
+  }
+}
+
+async function recommend(photoId) {
+  if (state.likedPhotoIds.has(photoId)) {
+    state.message = "이미 추천한 사진입니다.";
+    render();
+    return;
+  }
+
+  state.likedPhotoIds.add(photoId);
+  persistLikes();
+
+  try {
+    const updatedPhoto = await recommendPhoto(photoId);
+    replacePhoto(updatedPhoto);
+  } catch {
+    bumpLocalPhoto(photoId, "recommendationCount");
+  }
+
+  state.message = "추천이 반영되었습니다.";
+  render();
+}
+
+async function handleBookingSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const photographerId = Number(form.get("photographerId"));
 
   if (!photographerId) {
-    state.error = "상담을 요청할 작가를 먼저 선택해주세요.";
+    state.error = "예약 문의할 작가를 먼저 선택해주세요.";
     render();
     return;
   }
 
   try {
-    state.error = "";
-    state.inquiryStatus = "";
     const inquiry = await createInquiry({
       coupleName: form.get("coupleName"),
       phone: form.get("phone"),
@@ -375,12 +507,39 @@ async function handleSubmit(event) {
       message: form.get("message"),
       photographerId
     });
-    state.inquiryStatus = `${inquiry.coupleName}님의 상담 요청이 저장되었습니다.`;
+    state.message = `${inquiry.coupleName}님의 예약 문의가 저장되었습니다.`;
+    state.error = "";
+    changeScreen("feed");
+  } catch (error) {
+    state.error = error.message;
+    render();
+  }
+}
+
+function handleAdminLogin(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  if (form.get("password") !== ADMIN_PASSWORD) {
+    state.error = "관리자 비밀번호가 맞지 않습니다.";
+    render();
+    return;
+  }
+
+  state.adminAuthed = true;
+  sessionStorage.setItem("adminAuthed", "true");
+  state.error = "";
+  loadInquiries();
+}
+
+async function loadInquiries() {
+  try {
+    state.inquiries = await listInquiries();
+    state.error = "";
   } catch (error) {
     state.error = error.message;
   }
-
   render();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function handlePhotoSubmit(event) {
@@ -395,8 +554,6 @@ async function handlePhotoSubmit(event) {
   }
 
   try {
-    state.error = "";
-    state.photoStatus = "";
     const imageUrl = await imageFileToDataUrl(imageFile);
     const photo = await createPortfolioPhoto({
       title: form.get("title"),
@@ -407,18 +564,15 @@ async function handlePhotoSubmit(event) {
       featured: form.get("featured") === "on",
       photographerId: Number(form.get("photographerId"))
     });
-    state.photos = [photo, ...state.photos];
-    state.selectedMood = "all";
+    state.photos = [normalizePhoto(photo), ...state.photos];
+    state.selectedPhotoId = photo.id;
     state.selectedPhotographerId = photo.photographer?.id || state.selectedPhotographerId;
-    state.photoStatus = `${photo.title} 사진이 포트폴리오 맨 앞에 저장되었습니다.`;
-    event.currentTarget.reset();
+    state.message = `${photo.title} 사진이 등록되었습니다.`;
+    state.error = "";
+    changeScreen("detail");
   } catch (error) {
     state.error = error.message;
-  }
-
-  render();
-  if (state.photoStatus) {
-    document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    render();
   }
 }
 
@@ -437,9 +591,7 @@ async function imageFileToDataUrl(file) {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(image.width * ratio);
   canvas.height = Math.round(image.height * ratio);
-
-  const context = canvas.getContext("2d");
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
 
   return canvas.toDataURL("image/jpeg", 0.82);
 }
@@ -460,22 +612,43 @@ function loadImage(file) {
   });
 }
 
+function getSelectedPhoto() {
+  return state.photos.find((photo) => photo.id === state.selectedPhotoId);
+}
+
 function getSelectedPhotographer() {
   return state.photographers.find((photographer) => photographer.id === state.selectedPhotographerId);
 }
 
-function moodLabel(mood) {
-  const labels = {
-    all: "All",
-    calm: "Calm",
-    soft: "Soft",
-    editorial: "Editorial",
-    classic: "Classic",
-    film: "Film",
-    detail: "Details"
-  };
+function replacePhoto(updatedPhoto) {
+  const normalized = normalizePhoto(updatedPhoto);
+  state.photos = state.photos.map((photo) => (photo.id === normalized.id ? normalized : photo));
+}
 
-  return labels[mood] || mood;
+function bumpLocalPhoto(photoId, key) {
+  state.photos = state.photos.map((photo) => photo.id === photoId
+    ? { ...photo, [key]: count(photo[key]) + 1 }
+    : photo);
+}
+
+function normalizePhotos(photos) {
+  return photos.map(normalizePhoto);
+}
+
+function normalizePhoto(photo) {
+  return {
+    ...photo,
+    viewCount: count(photo.viewCount),
+    recommendationCount: count(photo.recommendationCount)
+  };
+}
+
+function persistLikes() {
+  localStorage.setItem("likedPhotoIds", JSON.stringify([...state.likedPhotoIds]));
+}
+
+function count(value) {
+  return Number.isFinite(Number(value)) ? Number(value) : 0;
 }
 
 function formatPrice(value) {
@@ -483,7 +656,7 @@ function formatPrice(value) {
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

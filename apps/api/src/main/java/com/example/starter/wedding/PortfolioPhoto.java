@@ -34,6 +34,12 @@ public class PortfolioPhoto {
   @Column(nullable = false)
   private Boolean featured;
 
+  @Column(nullable = false)
+  private Integer viewCount = 0;
+
+  @Column(nullable = false)
+  private Integer recommendationCount = 0;
+
   @ManyToOne(fetch = FetchType.EAGER, optional = false)
   @JoinColumn(name = "photographer_id")
   private Photographer photographer;
@@ -50,6 +56,8 @@ public class PortfolioPhoto {
     this.imageUrl = imageUrl;
     this.featured = featured;
     this.photographer = photographer;
+    this.viewCount = 0;
+    this.recommendationCount = 0;
   }
 
   public Long getId() {
@@ -80,7 +88,27 @@ public class PortfolioPhoto {
     return featured;
   }
 
+  public Integer getViewCount() {
+    return viewCount;
+  }
+
+  public Integer getRecommendationCount() {
+    return recommendationCount;
+  }
+
   public Photographer getPhotographer() {
     return photographer;
+  }
+
+  public void incrementViewCount() {
+    viewCount = safeCount(viewCount) + 1;
+  }
+
+  public void incrementRecommendationCount() {
+    recommendationCount = safeCount(recommendationCount) + 1;
+  }
+
+  private Integer safeCount(Integer value) {
+    return value == null ? 0 : value;
   }
 }

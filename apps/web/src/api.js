@@ -29,6 +29,10 @@ export function getStudio() {
   return request("/api/studio");
 }
 
+export function listInquiries() {
+  return request("/api/inquiries");
+}
+
 export function createInquiry(inquiry) {
   return request("/api/inquiries", {
     method: "POST",
@@ -40,5 +44,17 @@ export function createPortfolioPhoto(photo) {
   return request("/api/portfolio", {
     method: "POST",
     body: JSON.stringify(photo)
+  });
+}
+
+export function recordPhotoView(photoId) {
+  return request(`/api/portfolio/${photoId}/views`, {
+    method: "POST"
+  });
+}
+
+export function recommendPhoto(photoId) {
+  return request(`/api/portfolio/${photoId}/recommendations`, {
+    method: "POST"
   });
 }

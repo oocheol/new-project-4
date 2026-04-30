@@ -48,6 +48,24 @@ public class StudioController {
     return portfolioPhotoRepository.findAllByOrderByFeaturedDescIdAsc();
   }
 
+  @PostMapping("/portfolio/{id}/views")
+  public PortfolioPhoto recordPhotoView(@PathVariable Long id) {
+    PortfolioPhoto photo = portfolioPhotoRepository.findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Portfolio photo not found"));
+
+    photo.incrementViewCount();
+    return portfolioPhotoRepository.save(photo);
+  }
+
+  @PostMapping("/portfolio/{id}/recommendations")
+  public PortfolioPhoto recommendPhoto(@PathVariable Long id) {
+    PortfolioPhoto photo = portfolioPhotoRepository.findById(id)
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Portfolio photo not found"));
+
+    photo.incrementRecommendationCount();
+    return portfolioPhotoRepository.save(photo);
+  }
+
   @PostMapping("/portfolio")
   @ResponseStatus(HttpStatus.CREATED)
   public PortfolioPhoto createPortfolioPhoto(@Valid @RequestBody PortfolioPhotoRequest request) {
