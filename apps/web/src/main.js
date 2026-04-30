@@ -172,18 +172,19 @@ function render() {
             `).join("")}
           </div>
           <div class="portfolio-grid">
-            ${filteredPhotos.map((photo) => `
-              <article class="photo-card ${state.selectedPhotographerId === photo.photographer.id ? "selected" : ""}">
-                <button class="photo-select" type="button" data-photographer-id="${photo.photographer.id}" aria-label="${escapeHtml(photo.photographer.name)} 작가 선택">
-                  <img src="${photo.imageUrl}" alt="${escapeHtml(photo.title)}" />
-                  <span class="photo-meta">
-                    <strong>${escapeHtml(photo.title)}</strong>
-                    <small>${escapeHtml(photo.venue)} / ${escapeHtml(photo.season)}</small>
-                  </span>
-                  <span class="photo-artist">${escapeHtml(photo.photographer.name)}</span>
-                </button>
-              </article>
-            `).join("")}
+            ${filteredPhotos.length ? filteredPhotos.map((photo) => `
+                <article class="photo-card ${state.selectedPhotographerId === photo.photographer.id ? "selected" : ""}">
+                  <button class="photo-select" type="button" data-photographer-id="${photo.photographer.id}" aria-label="${escapeHtml(photo.photographer.name)} 작가 선택">
+                    <img src="${photo.imageUrl}" alt="${escapeHtml(photo.title)}" />
+                    <span class="photo-meta">
+                      <strong>${escapeHtml(photo.title)}</strong>
+                      <small>${escapeHtml(photo.venue)} / ${escapeHtml(photo.season)}</small>
+                    </span>
+                    <span class="photo-artist">${escapeHtml(photo.photographer.name)}</span>
+                  </button>
+                </article>
+              `).join("")
+              : `<p class="empty-state">이 무드에 등록된 사진이 아직 없습니다.</p>`}
           </div>
         </section>
 
@@ -407,12 +408,18 @@ async function handlePhotoSubmit(event) {
       photographerId: Number(form.get("photographerId"))
     });
     state.photos = [photo, ...state.photos];
-    state.photoStatus = `${photo.title} 사진이 포트폴리오에 저장되었습니다.`;
+    state.selectedMood = "all";
+    state.selectedPhotographerId = photo.photographer?.id || state.selectedPhotographerId;
+    state.photoStatus = `${photo.title} 사진이 포트폴리오 맨 앞에 저장되었습니다.`;
+    event.currentTarget.reset();
   } catch (error) {
     state.error = error.message;
   }
 
   render();
+  if (state.photoStatus) {
+    document.querySelector("#portfolio")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 async function imageFileToDataUrl(file) {
