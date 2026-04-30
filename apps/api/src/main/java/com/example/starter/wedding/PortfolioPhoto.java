@@ -28,7 +28,7 @@ public class PortfolioPhoto {
   @Column(nullable = false)
   private String season;
 
-  @Column(nullable = false, length = 1500)
+  @Column(nullable = false, columnDefinition = "text")
   private String imageUrl;
 
   @Column(nullable = false)

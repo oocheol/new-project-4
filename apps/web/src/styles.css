@@ -535,6 +535,17 @@ textarea {
   outline: 0;
 }
 
+input[type="file"] {
+  border-style: dashed;
+  background: #fffaf2;
+}
+
+.file-field small {
+  color: #7b6b59;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 input:focus,
 select:focus,
 textarea:focus {

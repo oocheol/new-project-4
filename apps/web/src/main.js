@@ -268,7 +268,7 @@ function render() {
         <section class="admin" id="studio-admin">
           <div class="section-heading">
             <h2>Studio Admin</h2>
-            <p>촬영한 신혼부부 사진을 URL로 등록하면 포트폴리오 DB에 저장되고 화면에 바로 반영됩니다.</p>
+            <p>촬영한 신혼부부 사진 파일을 선택하면 포트폴리오 DB에 저장되고 화면에 바로 반영됩니다.</p>
           </div>
           ${state.photoStatus ? `<p class="success admin-status">${escapeHtml(state.photoStatus)}</p>` : ""}
           <form class="admin-form" id="photo-form">
@@ -296,9 +296,10 @@ function render() {
               <span>시즌</span>
               <input name="season" placeholder="예: Spring" required />
             </label>
-            <label>
-              <span>이미지 URL</span>
-              <input name="imageUrl" type="url" placeholder="https://..." required />
+            <label class="file-field full">
+              <span>사진 파일</span>
+              <input name="imageFile" type="file" accept="image/*" required />
+              <small>JPG, PNG, WebP 이미지를 선택하면 저장 전에 화면용 크기로 자동 압축됩니다.</small>
             </label>
             <label class="checkbox full">
               <input name="featured" type="checkbox" />
@@ -384,16 +385,24 @@ async function handleSubmit(event) {
 async function handlePhotoSubmit(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const imageFile = form.get("imageFile");
+
+  if (!(imageFile instanceof File) || imageFile.size === 0) {
+    state.error = "업로드할 사진 파일을 선택해주세요.";
+    render();
+    return;
+  }
 
   try {
     state.error = "";
     state.photoStatus = "";
+    const imageUrl = await imageFileToDataUrl(imageFile);
     const photo = await createPortfolioPhoto({
       title: form.get("title"),
       mood: form.get("mood"),
       venue: form.get("venue"),
       season: form.get("season"),
-      imageUrl: form.get("imageUrl"),
+      imageUrl,
       featured: form.get("featured") === "on",
       photographerId: Number(form.get("photographerId"))
     });
@@ -404,6 +413,44 @@ async function handlePhotoSubmit(event) {
   }
 
   render();
+}
+
+async function imageFileToDataUrl(file) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("이미지 파일만 업로드할 수 있습니다.");
+  }
+
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error("사진 파일은 8MB 이하로 선택해주세요.");
+  }
+
+  const image = await loadImage(file);
+  const maxSize = 1400;
+  const ratio = Math.min(1, maxSize / Math.max(image.width, image.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.width * ratio);
+  canvas.height = Math.round(image.height * ratio);
+
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("사진 파일을 읽을 수 없습니다."));
+    };
+    image.src = objectUrl;
+  });
 }
 
 function getSelectedPhotographer() {
