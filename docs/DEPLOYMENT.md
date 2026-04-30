@@ -29,7 +29,15 @@ You can also use `infra/render.yaml` as a blueprint reference.
 
 Create a Vercel project from this repository.
 
-- Root directory: `apps/web`
+- Git repository: `oocheol/new-project-4`
+- Production branch: `master`
+- Root directory: repository root, or `apps/web`
+- Framework preset: Vite
+- Build command from repository root: `cd apps/web && npm run build`
+- Output directory from repository root: `apps/web/dist`
+
+The root `vercel.json` already sets the repository-root build commands. If you set Vercel's Root Directory to `apps/web`, use these settings instead:
+
 - Build command: `npm run build`
 - Output directory: `dist`
 
@@ -38,6 +46,8 @@ Frontend environment variable:
 ```text
 VITE_API_BASE_URL=https://<your-render-service>.onrender.com
 ```
+
+For automatic deploys, confirm Project Settings > Git has the GitHub repository connected and that Ignored Build Step is empty unless you intentionally skip builds.
 
 ## 4. Free-Tier Notes
 
