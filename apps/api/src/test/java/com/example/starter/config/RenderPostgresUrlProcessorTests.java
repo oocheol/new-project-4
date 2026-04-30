@@ -13,12 +13,14 @@ class RenderPostgresUrlProcessorTests {
   @Test
   void convertsRenderPostgresqlUrlToJdbcUrl() {
     MockEnvironment environment = new MockEnvironment()
-        .withProperty("spring.datasource.url", "postgresql://user:pass@host:5432/database");
+        .withProperty("spring.datasource.url", "postgresql://user:pass@host:5432/database?sslmode=require");
 
     processor.postProcessEnvironment(environment, new SpringApplication());
 
     assertThat(environment.getProperty("spring.datasource.url"))
-        .isEqualTo("jdbc:postgresql://user:pass@host:5432/database");
+        .isEqualTo("jdbc:postgresql://host:5432/database?sslmode=require");
+    assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("user");
+    assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("pass");
   }
 
   @Test
@@ -29,7 +31,9 @@ class RenderPostgresUrlProcessorTests {
     processor.postProcessEnvironment(environment, new SpringApplication());
 
     assertThat(environment.getProperty("spring.datasource.url"))
-        .isEqualTo("jdbc:postgresql://user:pass@host:5432/database");
+        .isEqualTo("jdbc:postgresql://host:5432/database");
+    assertThat(environment.getProperty("spring.datasource.username")).isEqualTo("user");
+    assertThat(environment.getProperty("spring.datasource.password")).isEqualTo("pass");
   }
 
   @Test
