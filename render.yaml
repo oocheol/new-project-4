@@ -14,8 +14,6 @@ services:
     envVars:
       - key: ALLOWED_ORIGINS
         value: https://web-seven-iota-63.vercel.app
-      - key: SPRING_PROFILES_ACTIVE
-        value: prod
       - key: SPRING_DATASOURCE_URL
         fromDatabase:
           name: han-studio-db

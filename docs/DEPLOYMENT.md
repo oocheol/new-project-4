@@ -7,9 +7,9 @@ Create a Supabase project and copy the PostgreSQL connection values.
 Backend environment variables:
 
 ```text
-DATABASE_URL=jdbc:postgresql://<host>:5432/postgres?sslmode=require
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=<supabase-db-password>
+SPRING_DATASOURCE_URL=jdbc:postgresql://<host>:5432/postgres?sslmode=require
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=<supabase-db-password>
 ALLOWED_ORIGINS=https://<your-vercel-domain>
 ```
 

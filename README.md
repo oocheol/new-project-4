@@ -39,7 +39,7 @@ cd apps/api
 gradle bootRun
 ```
 
-The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/han-studio` by default so local data persists across restarts. For PostgreSQL, set `DATABASE_URL`, `DATABASE_USERNAME`, and `DATABASE_PASSWORD`.
+The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/han-studio` by default so local data persists across restarts. For PostgreSQL, set `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`.
 
 ## Main API
 
