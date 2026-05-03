@@ -1,0 +1,9 @@
+.gradle
+build
+data
+*.db
+*.mv.db
+*.trace.db
+.env
+.env.*
+!*.env.example
