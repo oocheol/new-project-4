@@ -52,7 +52,7 @@ The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/ha
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Render, Vercel, and Supabase setup.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Render, Vercel, and Supabase setup. See [docs/ORACLE_DEPLOYMENT.md](docs/ORACLE_DEPLOYMENT.md) for Oracle Always Free VM deployment.
 
 ## AI Contributor Entry Point
 
