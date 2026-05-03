@@ -13,22 +13,21 @@ SPRING_DATASOURCE_PASSWORD=<supabase-db-password>
 ALLOWED_ORIGINS=https://<your-vercel-domain>
 ```
 
-Render Blueprint `connectionString` values use `postgresql://...`; the API converts those values to `jdbc:postgresql://...` automatically.
+Render, Supabase, and Northflank-style `postgresql://...` or `postgres://...` URLs are converted to `jdbc:postgresql://...` automatically.
 
-## 2. Koyeb Backend
+## 2. Northflank Backend
 
-Koyeb is a good free backend target for the Spring Boot API. Use the existing Dockerfile in `apps/api`.
+Northflank Sandbox is the recommended free backend target for the Spring Boot API. Use a combined service so Northflank builds the Docker image from GitHub and runs it as a public API service.
 
-Create a Koyeb Web Service from GitHub:
+Create a Northflank combined service:
 
 - Repository: `oocheol/new-project-4`
 - Branch: `master`
-- Builder: Dockerfile
-- Root directory / work directory: `apps/api`
-- Dockerfile path: `Dockerfile`
-- Instance type: `free`
-- Region: Washington, D.C. or Frankfurt
-- Exposed port: `8080`
+- Service type: Combined
+- Build type: Dockerfile
+- Build context: `/apps/api`
+- Dockerfile path: `/apps/api/Dockerfile`
+- Public port: `8080`
 - Health check path: `/api/health`
 
 Environment variables:
@@ -40,12 +39,12 @@ SPRING_DATASOURCE_PASSWORD=<your-db-password-if-not-in-url>
 ALLOWED_ORIGINS=https://<your-vercel-domain>
 ```
 
-If you use a Render/Supabase-style `postgresql://...` or `postgres://...` database URL, the API converts it to a JDBC URL automatically at startup.
+You can keep using the existing external Postgres database, or create a Northflank Postgres addon and copy its connection details into the variables above.
 
-After Koyeb gives you a public service URL, update the Vercel frontend variable:
+After Northflank gives you a public service URL, update the Vercel frontend variable:
 
 ```text
-VITE_API_BASE_URL=https://<your-koyeb-service>.koyeb.app
+VITE_API_BASE_URL=https://<your-northflank-service-url>
 ```
 
 Then redeploy the Vercel frontend.
@@ -82,13 +81,13 @@ Frontend environment variable:
 VITE_API_BASE_URL=https://<your-api-service-url>
 ```
 
-Do not set `VITE_API_BASE_URL` to the Vercel frontend URL. The value must point to the Spring Boot API service, for example Koyeb or Render.
+Do not set `VITE_API_BASE_URL` to the Vercel frontend URL. The value must point to the Spring Boot API service, for example Northflank or Render.
 
 For automatic deploys, confirm Project Settings > Git has the GitHub repository connected and that Ignored Build Step is empty unless you intentionally skip builds.
 
 ## 5. Free-Tier Notes
 
 - Render free services can sleep when idle, so the first request after inactivity may be slow.
-- Koyeb free services scale down after inactivity, so the first request after idle time can still be slower than a paid always-on service.
+- Northflank Sandbox is intended for prototypes, tests, and hobby projects. Upgrade before production traffic grows.
 - Supabase free projects have quota limits. Use it for prototypes and small MVPs, then upgrade when real usage begins.
 - Keep secrets only in Vercel, Render, and Supabase dashboards.

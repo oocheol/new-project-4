@@ -52,7 +52,7 @@ The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/ha
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Vercel, Render, and Supabase setup.
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Vercel, Northflank, Render, and Supabase setup.
 
 ## AI Contributor Entry Point
 
