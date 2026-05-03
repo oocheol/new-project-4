@@ -6,6 +6,8 @@ app:
     allowed-origins: ${ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
 
 spring:
+  main:
+    lazy-initialization: ${SPRING_MAIN_LAZY_INITIALIZATION:true}
   datasource:
     url: ${SPRING_DATASOURCE_URL:${DATABASE_URL:jdbc:h2:file:./data/han-studio;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE}}
     username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME:sa}}
