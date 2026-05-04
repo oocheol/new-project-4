@@ -21,6 +21,7 @@ const state = {
   myPhotos: [],
   selectedFile: null,
   previewUrl: "",
+  uploadTitle: "",
   message: "",
   error: "",
   loading: false
@@ -186,11 +187,11 @@ function renderUpload() {
       <form class="panel upload-form" data-upload-form>
         <label>
           <span>사진 제목</span>
-          <input name="title" maxlength="80" placeholder="예: 창가 자연광 테스트" required />
+          <input name="title" value="${escapeHtml(state.uploadTitle)}" maxlength="80" placeholder="예: 창가 자연광 테스트" required />
         </label>
 
         <label class="upload-drop">
-          <input name="photo" type="file" accept="image/*" required />
+          <input name="photo" type="file" accept="image/*" />
           ${state.previewUrl ? `
             <img src="${state.previewUrl}" alt="선택한 사진 미리보기" />
           ` : `
@@ -278,6 +279,9 @@ function bindEvents() {
 
   document.querySelector("[data-auth-form]")?.addEventListener("submit", handleAuth);
   document.querySelector("[data-upload-form]")?.addEventListener("submit", handleUpload);
+  document.querySelector("input[name='title']")?.addEventListener("input", (e) => {
+    state.uploadTitle = e.target.value;
+  });
   document.querySelector("input[type='file']")?.addEventListener("change", handleFileChange);
   document.querySelector("[data-logout]")?.addEventListener("click", logout);
 
@@ -344,6 +348,7 @@ async function handleUpload(event) {
     });
     state.previewUrl = "";
     state.selectedFile = null;
+    state.uploadTitle = "";
     state.screen = "mine";
     state.message = "사진이 올라갔습니다.";
     await Promise.all([refreshPhotos(), refreshMyPhotos()]);
@@ -383,6 +388,7 @@ function logout() {
   state.authMode = "login";
   state.photos = [];
   state.myPhotos = [];
+  state.uploadTitle = "";
   clearNotice();
   render();
 }
