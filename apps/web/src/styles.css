@@ -261,8 +261,27 @@ input:focus {
   gap: 16px;
 }
 
+.rating-stage {
+  display: grid;
+  gap: 10px;
+  touch-action: pan-y;
+}
+
+.progress-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #7a6a57;
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .photo-card {
   overflow: hidden;
+}
+
+.single-card {
+  min-height: calc(100svh - 248px);
 }
 
 .photo-image {
@@ -280,7 +299,7 @@ input:focus {
 
 .photo-title-row {
   display: grid;
-  grid-template-columns: 1fr 68px;
+  grid-template-columns: 1fr 86px;
   gap: 10px;
   align-items: start;
 }
@@ -295,21 +314,29 @@ input:focus {
   margin-bottom: 0;
 }
 
-.score-badge {
+.score-badge,
+.private-badge {
   display: grid;
   min-height: 58px;
   place-items: center;
   border-radius: 8px;
   background: #efe5d6;
   color: #33281d;
+  text-align: center;
 }
 
-.score-badge strong {
+.score-badge strong,
+.private-badge strong {
   font-size: 22px;
   line-height: 1;
 }
 
-.score-badge span {
+.private-badge strong {
+  font-size: 13px;
+}
+
+.score-badge span,
+.private-badge span {
   color: #786750;
   font-size: 12px;
   font-weight: 800;
@@ -333,6 +360,16 @@ input:focus {
 .stars button.active {
   background: #2d241a;
   color: #f8d073;
+}
+
+.owner-note {
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: #efe5d6;
+  color: #6b5c49;
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .upload-drop {

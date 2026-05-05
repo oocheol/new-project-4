@@ -19,6 +19,9 @@ const state = {
   user: null,
   photos: [],
   myPhotos: [],
+  currentIndex: 0,
+  touchStartX: 0,
+  touchStartY: 0,
   selectedFile: null,
   previewUrl: "",
   uploadTitle: "",
@@ -145,17 +148,24 @@ function renderAuthedScreen() {
 }
 
 function renderFeed() {
+  const queue = getRatingQueue();
+  const currentPhoto = queue[state.currentIndex] || null;
+
   return `
     <section class="feed-screen">
       <div class="section-heading">
-        <h1>오늘 올라온 사진</h1>
-        <p>별점을 누르면 바로 평균에 반영됩니다. 이미 준 점수는 다시 눌러 바꿀 수 있어요.</p>
+        <h1>한 장씩 평가하기</h1>
+        <p>사진은 한 장만 보여요. 점수를 남기면 다음 사진으로 넘어갑니다.</p>
       </div>
-      ${state.photos.length ? `
-        <div class="photo-list">
-          ${state.photos.map(renderPhotoCard).join("")}
+      ${currentPhoto ? `
+        <div class="rating-stage" data-swipe-card>
+          <div class="progress-row">
+            <span>${state.currentIndex + 1} / ${queue.length}</span>
+            <span>스와이프 가능</span>
+          </div>
+          ${renderPhotoCard(currentPhoto, "feed")}
         </div>
-      ` : renderEmpty("아직 올라온 사진이 없습니다.", "첫 사진을 올려서 평가를 받아보세요.")}
+      ` : renderEmpty("평가할 사진이 없습니다.", "새 사진이 올라오면 여기에서 한 장씩 보여드릴게요.")}
     </section>
   `;
 }
@@ -169,7 +179,7 @@ function renderMine() {
       </div>
       ${state.myPhotos.length ? `
         <div class="photo-list">
-          ${state.myPhotos.map(renderPhotoCard).join("")}
+          ${state.myPhotos.map((photo) => renderPhotoCard(photo, "mine")).join("")}
         </div>
       ` : renderEmpty("내 사진이 아직 없습니다.", "업로드 탭에서 첫 사진을 올려보세요.")}
     </section>
@@ -208,9 +218,13 @@ function renderUpload() {
   `;
 }
 
-function renderPhotoCard(photo) {
+function renderPhotoCard(photo, context) {
+  const showStats = context === "mine";
+  const ratingCount = Number(photo.ratingCount || 0);
+  const averageScore = typeof photo.averageScore === "number" ? photo.averageScore.toFixed(1) : "-";
+
   return `
-    <article class="photo-card">
+    <article class="photo-card ${context === "feed" ? "single-card" : ""}">
       <img class="photo-image" src="${photo.imageData}" alt="${escapeHtml(photo.title)}" />
       <div class="photo-body">
         <div class="photo-title-row">
@@ -218,18 +232,29 @@ function renderPhotoCard(photo) {
             <h2>${escapeHtml(photo.title)}</h2>
             <p>${escapeHtml(photo.owner.nickname)} 작가</p>
           </div>
-          <div class="score-badge">
-            <strong>${photo.ratingCount ? photo.averageScore.toFixed(1) : "-"}</strong>
-            <span>${photo.ratingCount}명</span>
+          ${showStats ? `
+            <div class="score-badge">
+              <strong>${ratingCount ? averageScore : "-"}</strong>
+              <span>${ratingCount}명</span>
+            </div>
+          ` : `
+            <div class="private-badge">
+              <strong>비공개</strong>
+              <span>평균은 작가만</span>
+            </div>
+          `}
+        </div>
+        ${showStats ? `
+          <div class="owner-note">이 평점은 내 사진 탭에서만 보입니다.</div>
+        ` : `
+          <div class="stars" aria-label="평점 선택">
+            ${[1, 2, 3, 4, 5].map((score) => `
+              <button class="${photo.myScore >= score ? "active" : ""}" data-rate-photo="${photo.id}" data-score="${score}" type="button" aria-label="${score}점">
+                ★
+              </button>
+            `).join("")}
           </div>
-        </div>
-        <div class="stars" aria-label="평점 선택">
-          ${[1, 2, 3, 4, 5].map((score) => `
-            <button class="${photo.myScore >= score ? "active" : ""}" data-rate-photo="${photo.id}" data-score="${score}" type="button" aria-label="${score}점">
-              ★
-            </button>
-          `).join("")}
-        </div>
+        `}
       </div>
     </article>
   `;
@@ -284,6 +309,7 @@ function bindEvents() {
   });
   document.querySelector("input[type='file']")?.addEventListener("change", handleFileChange);
   document.querySelector("[data-logout]")?.addEventListener("click", logout);
+  bindSwipeCard();
 
   document.querySelectorAll("[data-rate-photo]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -367,6 +393,7 @@ async function handleRate(photoId, score) {
     state.photos = state.photos.map((photo) => photo.id === photoId ? updated : photo);
     state.myPhotos = state.myPhotos.map((photo) => photo.id === photoId ? updated : photo);
     state.message = `${score}점을 남겼습니다.`;
+    clampCurrentIndex();
   } catch (error) {
     state.error = error.message;
   }
@@ -375,6 +402,7 @@ async function handleRate(photoId, score) {
 
 async function refreshPhotos() {
   state.photos = await listPhotos();
+  clampCurrentIndex();
 }
 
 async function refreshMyPhotos() {
@@ -388,9 +416,64 @@ function logout() {
   state.authMode = "login";
   state.photos = [];
   state.myPhotos = [];
+  state.currentIndex = 0;
   state.uploadTitle = "";
   clearNotice();
   render();
+}
+
+function bindSwipeCard() {
+  const card = document.querySelector("[data-swipe-card]");
+  if (!card) {
+    return;
+  }
+
+  card.addEventListener("touchstart", (event) => {
+    const touch = event.touches[0];
+    state.touchStartX = touch.clientX;
+    state.touchStartY = touch.clientY;
+  }, { passive: true });
+
+  card.addEventListener("touchend", (event) => {
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - state.touchStartX;
+    const deltaY = touch.clientY - state.touchStartY;
+
+    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      advanceCard();
+    } else {
+      previousCard();
+    }
+
+    clearNotice();
+    render();
+  }, { passive: true });
+}
+
+function getRatingQueue() {
+  return state.photos.filter((photo) => photo.myScore == null && photo.owner.id !== state.user?.id);
+}
+
+function advanceCard() {
+  const queueLength = getRatingQueue().length;
+  if (queueLength === 0) {
+    state.currentIndex = 0;
+    return;
+  }
+  state.currentIndex = Math.min(state.currentIndex + 1, queueLength - 1);
+}
+
+function previousCard() {
+  state.currentIndex = Math.max(state.currentIndex - 1, 0);
+}
+
+function clampCurrentIndex() {
+  const queueLength = getRatingQueue().length;
+  state.currentIndex = queueLength === 0 ? 0 : Math.min(state.currentIndex, queueLength - 1);
 }
 
 function clearNotice() {

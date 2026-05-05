@@ -84,7 +84,7 @@ public class RatingController {
       @RequestHeader(name = "Authorization", required = false) String authorization) {
     Optional<PhotoUser> currentUser = findUser(authorization);
     return photoRepository.findAllByOrderByCreatedAtDesc().stream()
-        .map(photo -> toResponse(photo, currentUser.orElse(null)))
+        .map(photo -> toResponse(photo, currentUser.orElse(null), false))
         .collect(Collectors.toList());
   }
 
@@ -93,7 +93,7 @@ public class RatingController {
       @RequestHeader(name = "Authorization", required = false) String authorization) {
     PhotoUser user = requireUser(authorization);
     return photoRepository.findAllByOwnerIdOrderByCreatedAtDesc(user.getId()).stream()
-        .map(photo -> toResponse(photo, user))
+        .map(photo -> toResponse(photo, user, true))
         .collect(Collectors.toList());
   }
 
@@ -114,7 +114,7 @@ public class RatingController {
     }
 
     RatingPhoto photo = photoRepository.save(new RatingPhoto(clean(request.getTitle()), imageData, user));
-    return toResponse(photo, user);
+    return toResponse(photo, user, true);
   }
 
   @PostMapping("/photos/{photoId}/ratings")
@@ -131,10 +131,10 @@ public class RatingController {
     rating.setScore(request.getScore());
     ratingRepository.save(rating);
 
-    return toResponse(photo, user);
+    return toResponse(photo, user, false);
   }
 
-  private RatingPhotoResponse toResponse(RatingPhoto photo, PhotoUser currentUser) {
+  private RatingPhotoResponse toResponse(RatingPhoto photo, PhotoUser currentUser, boolean includeStats) {
     List<PhotoRating> ratings = ratingRepository.findAllByPhotoId(photo.getId());
     double average = ratings.stream().mapToInt(PhotoRating::getScore).average().orElse(0);
     Integer myScore = currentUser == null ? null : ratings.stream()
@@ -143,7 +143,10 @@ public class RatingController {
         .findFirst()
         .orElse(null);
 
-    return new RatingPhotoResponse(photo, Math.round(average * 10.0) / 10.0, ratings.size(), myScore);
+    Double visibleAverage = includeStats ? Math.round(average * 10.0) / 10.0 : null;
+    Integer visibleCount = includeStats ? ratings.size() : null;
+
+    return new RatingPhotoResponse(photo, visibleAverage, visibleCount, myScore);
   }
 
   private Optional<PhotoUser> findUser(String authorization) {

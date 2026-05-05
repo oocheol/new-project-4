@@ -9,11 +9,11 @@ public class RatingPhotoResponse {
   private final String imageData;
   private final PhotoUserSummary owner;
   private final Instant createdAt;
-  private final double averageScore;
-  private final int ratingCount;
+  private final Double averageScore;
+  private final Integer ratingCount;
   private final Integer myScore;
 
-  public RatingPhotoResponse(RatingPhoto photo, double averageScore, int ratingCount, Integer myScore) {
+  public RatingPhotoResponse(RatingPhoto photo, Double averageScore, Integer ratingCount, Integer myScore) {
     this.id = photo.getId();
     this.title = photo.getTitle();
     this.imageData = photo.getImageData();
@@ -44,11 +44,11 @@ public class RatingPhotoResponse {
     return createdAt;
   }
 
-  public double getAverageScore() {
+  public Double getAverageScore() {
     return averageScore;
   }
 
-  public int getRatingCount() {
+  public Integer getRatingCount() {
     return ratingCount;
   }
 
