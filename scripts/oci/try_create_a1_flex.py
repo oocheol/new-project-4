@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import oci
-from oci.exceptions import ConfigFileNotFound, InvalidConfig, ServiceError
+from oci.exceptions import ConfigFileNotFound, InvalidConfig, RequestException, ServiceError
 
 
 REQUIRED_ENV = (
@@ -164,6 +164,9 @@ def main():
             emit("NO_CAPACITY", code=error.code, message=error.message)
             return 2
         emit("ERROR", code=error.code, message=error.message)
+        return 1
+    except RequestException as error:
+        emit("ERROR", code="RequestException", message=str(error))
         return 1
 
 

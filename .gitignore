@@ -16,6 +16,7 @@ apps/api/data/
 .env
 .env.*
 infra/oracle/a1-flex.env
+infra/oracle/a1-flex-ssh.pub
 !.env.example
 !apps/web/.env.example
 !apps/api/.env.example
