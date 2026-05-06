@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="${1:-$REPO_ROOT/infra/oracle/a1-flex.wsl.env}"
 PYTHON_BIN="${OCI_SDK_PYTHON:-python3}"
 INTERVAL_SECONDS="${OCI_A1_RETRY_INTERVAL_SECONDS:-60}"
+RATE_LIMIT_SECONDS="${OCI_A1_RATE_LIMIT_BACKOFF_SECONDS:-300}"
 
 load_env_file() {
   local file="$1"
@@ -74,6 +75,7 @@ while true; do
   output="$("$PYTHON_BIN" "$REPO_ROOT/scripts/oci/try_create_a1_flex.py" 2>&1)"
   exit_code=$?
   status="$(json_field "$output" "status")"
+  code="$(json_field "$output" "code")"
 
   echo "[$timestamp] $output"
 
@@ -82,5 +84,9 @@ while true; do
     exit 0
   fi
 
-  sleep "$INTERVAL_SECONDS"
+  if [[ "$code" == "TooManyRequests" ]]; then
+    sleep "$RATE_LIMIT_SECONDS"
+  else
+    sleep "$INTERVAL_SECONDS"
+  fi
 done
