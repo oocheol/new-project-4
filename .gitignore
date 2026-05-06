@@ -15,6 +15,7 @@ apps/api/data/
 
 .env
 .env.*
+infra/oracle/a1-flex.env
 !.env.example
 !apps/web/.env.example
 !apps/api/.env.example
