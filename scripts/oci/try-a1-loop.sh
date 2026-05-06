@@ -5,7 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 ENV_FILE="${1:-$REPO_ROOT/infra/oracle/a1-flex.wsl.env}"
 PYTHON_BIN="${OCI_SDK_PYTHON:-python3}"
-INTERVAL_SECONDS="${OCI_A1_RETRY_INTERVAL_SECONDS:-120}"
+INTERVAL_SECONDS="${OCI_A1_RETRY_INTERVAL_SECONDS:-}"
+INTERVAL_MIN_SECONDS="${OCI_A1_RETRY_INTERVAL_MIN_SECONDS:-70}"
+INTERVAL_MAX_SECONDS="${OCI_A1_RETRY_INTERVAL_MAX_SECONDS:-100}"
 RATE_LIMIT_SECONDS="${OCI_A1_RATE_LIMIT_BACKOFF_SECONDS:-300}"
 
 load_env_file() {
@@ -34,6 +36,24 @@ try:
     print(value if value is not None else "")
 except Exception:
     print("")
+PY
+}
+
+next_interval_seconds() {
+  if [[ -n "$INTERVAL_SECONDS" ]]; then
+    echo "$INTERVAL_SECONDS"
+    return 0
+  fi
+
+  "$PYTHON_BIN" - "$INTERVAL_MIN_SECONDS" "$INTERVAL_MAX_SECONDS" <<'PY'
+import random
+import sys
+
+low = int(sys.argv[1])
+high = int(sys.argv[2])
+if high < low:
+    low, high = high, low
+print(random.randint(low, high))
 PY
 }
 
@@ -87,6 +107,6 @@ while true; do
   if [[ "$code" == "TooManyRequests" ]]; then
     sleep "$RATE_LIMIT_SECONDS"
   else
-    sleep "$INTERVAL_SECONDS"
+    sleep "$(next_interval_seconds)"
   fi
 done
