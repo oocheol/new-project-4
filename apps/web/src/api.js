@@ -1,11 +1,9 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/$/, "");
 
 async function request(path, options = {}) {
-  const token = localStorage.getItem("ratingAuthToken");
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers
     },
     ...options
@@ -13,7 +11,7 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(cleanError(message) || `요청에 실패했습니다. (${response.status})`);
+    throw new Error(readableError(message) || `Request failed (${response.status})`);
   }
 
   if (response.status === 204) {
@@ -23,7 +21,7 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-function cleanError(message) {
+function readableError(message) {
   if (!message) {
     return "";
   }
@@ -32,7 +30,7 @@ function cleanError(message) {
     const parsed = JSON.parse(message);
     return parsed.message || parsed.error || message;
   } catch {
-    return message;
+    return message.startsWith("<!DOCTYPE") ? "API host is returning HTML. Check VITE_API_BASE_URL." : message;
   }
 }
 
@@ -40,42 +38,43 @@ export function getHealth() {
   return request("/api/health");
 }
 
-export function register(payload) {
-  return request("/api/rating/auth/register", {
+export function getMagazineHome() {
+  return request("/api/magazine/home");
+}
+
+export function createStory(payload) {
+  return request("/api/magazine/stories", {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
-export function login(payload) {
-  return request("/api/rating/auth/login", {
+export function likeStory(id) {
+  return request(`/api/magazine/stories/${id}/like`, { method: "POST" });
+}
+
+export function viewStory(id) {
+  return request(`/api/magazine/stories/${id}/view`, { method: "POST" });
+}
+
+export function createPhotoPage(payload) {
+  return request("/api/magazine/photo-pages", {
     method: "POST",
     body: JSON.stringify(payload)
   });
 }
 
-export function getMe() {
-  return request("/api/rating/me");
+export function likePhotoPage(id) {
+  return request(`/api/magazine/photo-pages/${id}/like`, { method: "POST" });
 }
 
-export function listPhotos() {
-  return request("/api/rating/photos");
+export function viewPhotoPage(id) {
+  return request(`/api/magazine/photo-pages/${id}/view`, { method: "POST" });
 }
 
-export function listMyPhotos() {
-  return request("/api/rating/photos/mine");
-}
-
-export function uploadPhoto(payload) {
-  return request("/api/rating/photos", {
+export function createSubmission(payload) {
+  return request("/api/magazine/submissions", {
     method: "POST",
     body: JSON.stringify(payload)
-  });
-}
-
-export function ratePhoto(photoId, score) {
-  return request(`/api/rating/photos/${photoId}/ratings`, {
-    method: "POST",
-    body: JSON.stringify({ score })
   });
 }

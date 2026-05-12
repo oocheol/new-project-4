@@ -1,51 +1,49 @@
 import {
+  createPhotoPage,
+  createStory,
+  createSubmission,
   getHealth,
-  getMe,
-  listMyPhotos,
-  listPhotos,
-  login,
-  ratePhoto,
-  register,
-  uploadPhoto
+  getMagazineHome,
+  likePhotoPage,
+  likeStory,
+  viewPhotoPage,
+  viewStory
 } from "./api.js";
 import "./styles.css";
 
 const app = document.querySelector("#app");
 
+const fallbackHome = {
+  brand: "무제 (Untitled)",
+  tagline: "빈 책 위에 사진과 글을 채워가는 온라인 잡지",
+  menus: ["Home", "Issues", "Stories", "Photo book", "Submit", "About", "Contact"],
+  issues: [
+    { number: "Issue 00", title: "Blank Book", theme: "시작 전의 페이지" }
+  ],
+  stories: [],
+  photoPages: []
+};
+
 const state = {
   health: "checking",
-  screen: localStorage.getItem("ratingAuthToken") ? "feed" : "auth",
-  authMode: "login",
-  user: null,
-  photos: [],
-  myPhotos: [],
-  currentIndex: 0,
-  touchStartX: 0,
-  touchStartY: 0,
-  selectedFile: null,
-  previewUrl: "",
-  uploadTitle: "",
+  view: "home",
+  home: fallbackHome,
+  selectedStoryId: null,
+  selectedPhotoIndex: 0,
+  search: "",
   message: "",
   error: "",
-  loading: false
+  loading: false,
+  mobileMenuOpen: false,
+  submissionPreview: "",
+  photoPreview: ""
 };
 
 render();
 bootstrap();
 
 async function bootstrap() {
-  await checkHealth();
-
-  if (localStorage.getItem("ratingAuthToken")) {
-    try {
-      state.user = await getMe();
-      await refreshPhotos();
-    } catch {
-      localStorage.removeItem("ratingAuthToken");
-      state.screen = "auth";
-    }
-  }
-
+  await Promise.all([checkHealth(), refreshHome()]);
   render();
 }
 
@@ -58,326 +56,408 @@ async function checkHealth() {
   }
 }
 
+async function refreshHome() {
+  try {
+    state.home = await getMagazineHome();
+  } catch (error) {
+    state.error = error.message;
+  }
+}
+
 function render() {
   app.innerHTML = `
-    <div class="app-shell">
+    <div class="site-shell">
       ${renderHeader()}
-      <main class="main-view">
-        ${renderNotice()}
-        ${state.screen === "auth" ? renderAuth() : renderAuthedScreen()}
+      <main>
+        ${renderStatus()}
+        ${renderCurrentView()}
       </main>
-      ${state.user ? renderTabbar() : ""}
+      ${renderFooter()}
     </div>
   `;
-
   bindEvents();
 }
 
 function renderHeader() {
+  const menus = ["Home", "Issues", "Stories", "Photo book", "Submit", "About", "Contact"];
   return `
-    <header class="topbar">
-      <button class="brand-mark" data-screen="${state.user ? "feed" : "auth"}" type="button" aria-label="홈">R</button>
-      <div class="brand-copy">
-        <strong>Rate Room</strong>
-        <span>${state.user ? `${escapeHtml(state.user.nickname)}님` : "사진 평점 스튜디오"}</span>
+    <header class="masthead">
+      <button class="wordmark" data-view="home" type="button">
+        <span>무제</span>
+        <small>Untitled</small>
+      </button>
+      <nav class="desktop-nav" aria-label="Main">
+        ${menus.map((item) => `<button class="${isActive(item) ? "active" : ""}" data-view="${viewKey(item)}" type="button">${item}</button>`).join("")}
+      </nav>
+      <div class="header-actions">
+        <label class="search-box">
+          <span>Search</span>
+          <input value="${escapeHtml(state.search)}" placeholder="제목, 작가, 문장" data-search />
+        </label>
+        <button class="menu-button" data-toggle-menu type="button">Menu</button>
       </div>
-      ${state.user ? `<button class="ghost-button" data-logout type="button">로그아웃</button>` : ""}
+      ${state.mobileMenuOpen ? `
+        <nav class="mobile-nav" aria-label="Mobile">
+          ${menus.map((item) => `<button data-view="${viewKey(item)}" type="button">${item}</button>`).join("")}
+        </nav>
+      ` : ""}
     </header>
   `;
 }
 
-function renderNotice() {
+function renderStatus() {
   return `
-    <div class="notice-row">
-      <span class="status status-${state.health}">API ${state.health}</span>
-      ${state.message ? `<span class="success">${escapeHtml(state.message)}</span>` : ""}
-      ${state.error ? `<span class="error">${escapeHtml(state.error)}</span>` : ""}
+    <div class="notice-line">
+      <span>API ${state.health}</span>
+      ${state.message ? `<strong>${escapeHtml(state.message)}</strong>` : ""}
+      ${state.error ? `<strong class="error">${escapeHtml(state.error)}</strong>` : ""}
     </div>
   `;
 }
 
-function renderAuth() {
-  const isRegister = state.authMode === "register";
+function renderCurrentView() {
+  if (state.view === "issues") return renderIssues();
+  if (state.view === "stories") return renderStories();
+  if (state.view === "photoBook") return renderPhotoBook();
+  if (state.view === "submit") return renderSubmit();
+  if (state.view === "about") return renderAbout();
+  if (state.view === "contact") return renderContact();
+  return renderHome();
+}
+
+function renderHome() {
+  const lead = filteredStories()[0] || state.home.stories[0];
   return `
-    <section class="auth-screen">
-      <div class="hero-copy">
-        <p class="eyebrow">사진을 올리고, 숫자만 받기</p>
-        <h1>기분 덜 상하게 받는 사진 평점</h1>
-        <p>말 대신 1점부터 5점까지. 내 사진의 평균만 빠르게 확인할 수 있게 만들었습니다.</p>
+    <section class="hero-book">
+      <div class="book-cover">
+        <span>Issue 00</span>
+        <h1>무제</h1>
+        <p>아직 제목이 붙지 않은 사진과 문장을 위한 온라인 잡지.</p>
       </div>
-
-      <form class="panel auth-form" data-auth-form>
-        <div class="mode-switch" role="tablist" aria-label="로그인 방식">
-          <button class="${!isRegister ? "active" : ""}" data-auth-mode="login" type="button">로그인</button>
-          <button class="${isRegister ? "active" : ""}" data-auth-mode="register" type="button">회원가입</button>
+      <div class="book-page">
+        <p class="quiet-label">Current note</p>
+        <h2>${lead ? escapeHtml(lead.title) : "빈 페이지를 펼칩니다"}</h2>
+        <p>${lead ? escapeHtml(lead.excerpt) : escapeHtml(state.home.tagline)}</p>
+        <div class="reader-actions">
+          <button class="primary-button" data-view="photoBook" type="button">사진 책 읽기</button>
+          <button class="secondary-button" data-view="submit" type="button">페이지 쓰기</button>
         </div>
+      </div>
+    </section>
 
-        <label>
-          <span>아이디</span>
-          <input name="loginId" autocomplete="username" minlength="3" maxlength="40" required />
-        </label>
-        <label>
-          <span>비밀번호</span>
-          <input name="password" type="password" autocomplete="${isRegister ? "new-password" : "current-password"}" minlength="4" maxlength="80" required />
-        </label>
-        ${isRegister ? `
-          <label>
-            <span>닉네임</span>
-            <input name="nickname" autocomplete="nickname" minlength="2" maxlength="30" required />
+    <section class="issue-strip">
+      <div>
+        <p class="quiet-label">Magazine menu</p>
+        <h2>읽고, 넘기고, 남기는 지면</h2>
+      </div>
+      <div class="menu-grid">
+        ${state.home.menus.map((menu) => `<button data-view="${viewKey(menu)}" type="button">${escapeHtml(menu)}</button>`).join("")}
+      </div>
+    </section>
+
+    <section class="story-shelf">
+      <div class="section-title">
+        <h2>Latest stories</h2>
+        <button data-view="stories" type="button">전체 보기</button>
+      </div>
+      <div class="story-row">
+        ${filteredStories().slice(0, 3).map(renderStoryCard).join("") || renderEmpty("아직 글이 없습니다.", "Submit에서 첫 페이지를 작성해보세요.")}
+      </div>
+    </section>
+
+    <section class="mobile-reader-preview">
+      <div class="section-title">
+        <h2>Photo book</h2>
+        <button data-view="photoBook" type="button">넘겨 보기</button>
+      </div>
+      <div class="phone-spread">
+        ${state.home.photoPages.slice(0, 3).map(renderPhonePage).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderIssues() {
+  return `
+    <section class="archive-page">
+      <p class="quiet-label">Archive</p>
+      <h1>Issues</h1>
+      <div class="issue-list">
+        ${state.home.issues.map((issue) => `
+          <article>
+            <span>${escapeHtml(issue.number)}</span>
+            <h2>${escapeHtml(issue.title)}</h2>
+            <p>${escapeHtml(issue.theme)}</p>
+          </article>
+        `).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function renderStories() {
+  const stories = filteredStories();
+  return `
+    <section class="archive-page">
+      <p class="quiet-label">Stories</p>
+      <h1>글과 사진의 목차</h1>
+      <div class="story-index">
+        ${stories.map(renderStoryIndexItem).join("") || renderEmpty("검색 결과가 없습니다.", "다른 단어로 찾아보세요.")}
+      </div>
+      ${state.selectedStoryId ? renderStoryReader() : ""}
+    </section>
+  `;
+}
+
+function renderStoryReader() {
+  const story = state.home.stories.find((item) => item.id === state.selectedStoryId);
+  if (!story) return "";
+  return `
+    <section class="story-reader">
+      <img src="${story.coverImageUrl}" alt="${escapeHtml(story.title)}" />
+      <article>
+        <p class="quiet-label">${escapeHtml(story.category)} · ${formatDate(story.createdAt)}</p>
+        <h2>${escapeHtml(story.title)}</h2>
+        <p class="byline">by ${escapeHtml(story.authorName)}</p>
+        ${paragraphs(story.body)}
+        <div class="reader-actions">
+          <button class="secondary-button" data-like-story="${story.id}" type="button">추천 ${story.likeCount}</button>
+          <span>조회 ${story.viewCount}</span>
+        </div>
+      </article>
+    </section>
+  `;
+}
+
+function renderPhotoBook() {
+  const pages = state.home.photoPages;
+  const page = pages[state.selectedPhotoIndex] || pages[0];
+  if (!page) {
+    return `<section class="archive-page">${renderEmpty("사진 페이지가 없습니다.", "첫 사진과 글을 추가해보세요.")}</section>`;
+  }
+
+  return `
+    <section class="book-reader">
+      <div class="reader-toolbar">
+        <div>
+          <p class="quiet-label">Photo book</p>
+          <h1>${escapeHtml(page.title)}</h1>
+        </div>
+        <span>${state.selectedPhotoIndex + 1} / ${pages.length}</span>
+      </div>
+      <div class="spread">
+        <figure>
+          <img src="${page.imageUrl}" alt="${escapeHtml(page.caption)}" />
+          <figcaption>${escapeHtml(page.caption)} · ${escapeHtml(page.photographer)}</figcaption>
+        </figure>
+        <article>
+          <p class="quiet-label">Page ${page.pageNumber}</p>
+          <h2>${escapeHtml(page.caption)}</h2>
+          ${paragraphs(page.storyText)}
+          <div class="reader-actions">
+            <button class="secondary-button" data-prev-page type="button">이전</button>
+            <button class="primary-button" data-next-page type="button">다음</button>
+            <button class="secondary-button" data-like-photo="${page.id}" type="button">추천 ${page.likeCount}</button>
+            <span>조회 ${page.viewCount}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
+}
+
+function renderSubmit() {
+  return `
+    <section class="submit-page">
+      <div class="submit-intro">
+        <p class="quiet-label">Submit</p>
+        <h1>빈 페이지 채우기</h1>
+        <p>사진과 글을 올리면 무제의 다음 페이지가 됩니다. 글만 제출하거나, 사진 책에 바로 들어갈 한 장을 만들 수도 있습니다.</p>
+      </div>
+      <div class="submit-layout">
+        <form class="editor-form" data-story-form>
+          <h2>글 제출</h2>
+          <label><span>제목</span><input name="title" required /></label>
+          <label><span>이름</span><input name="authorName" required /></label>
+          <label><span>이메일</span><input name="email" type="email" required /></label>
+          <label><span>분류</span><input name="category" value="Essay" required /></label>
+          <label><span>대표 이미지 URL</span><input name="coverImageUrl" required /></label>
+          <label><span>요약</span><textarea name="excerpt" rows="3" required></textarea></label>
+          <label><span>본문</span><textarea name="body" rows="8" required></textarea></label>
+          <button class="primary-button" type="submit">글 저장</button>
+        </form>
+
+        <form class="editor-form" data-photo-form>
+          <h2>사진 페이지 추가</h2>
+          <label><span>제목</span><input name="title" required /></label>
+          <label><span>작가</span><input name="photographer" required /></label>
+          <label><span>캡션</span><input name="caption" required /></label>
+          <label><span>페이지 번호</span><input name="pageNumber" type="number" min="1" value="${state.home.photoPages.length + 1}" required /></label>
+          <label class="file-drop">
+            <input name="imageFile" type="file" accept="image/*" />
+            ${state.photoPreview ? `<img src="${state.photoPreview}" alt="선택한 사진" />` : `<strong>사진 선택</strong><small>모바일에서도 바로 촬영 가능</small>`}
           </label>
-        ` : ""}
-
-        <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>
-          ${state.loading ? "처리 중" : isRegister ? "가입하고 시작" : "로그인"}
-        </button>
-      </form>
+          <label><span>이미지 URL</span><input name="imageUrl" placeholder="파일 대신 URL도 가능" /></label>
+          <label><span>짧은 글</span><textarea name="storyText" rows="6" required></textarea></label>
+          <button class="primary-button" type="submit">사진 페이지 저장</button>
+        </form>
+      </div>
     </section>
   `;
 }
 
-function renderAuthedScreen() {
-  if (state.screen === "upload") {
-    return renderUpload();
-  }
-
-  if (state.screen === "mine") {
-    return renderMine();
-  }
-
-  return renderFeed();
-}
-
-function renderFeed() {
-  const queue = getRatingQueue();
-  const currentPhoto = queue[state.currentIndex] || null;
-
+function renderAbout() {
   return `
-    <section class="feed-screen">
-      <div class="section-heading">
-        <h1>한 장씩 평가하기</h1>
-        <p>사진은 한 장만 보여요. 점수를 남기면 다음 사진으로 넘어갑니다.</p>
-      </div>
-      ${currentPhoto ? `
-        <div class="rating-stage" data-swipe-card>
-          <div class="progress-row">
-            <span>${state.currentIndex + 1} / ${queue.length}</span>
-            <span>스와이프 가능</span>
-          </div>
-          ${renderPhotoCard(currentPhoto, "feed")}
-        </div>
-      ` : renderEmpty("평가할 사진이 없습니다.", "새 사진이 올라오면 여기에서 한 장씩 보여드릴게요.")}
+    <section class="text-page">
+      <p class="quiet-label">About</p>
+      <h1>무제는 완성 전의 잡지입니다</h1>
+      <p>5ftmag 같은 독립 잡지의 탐색 구조를 참고하되, 무제는 사진과 글이 책장처럼 쌓이는 공간으로 새롭게 설계했습니다.</p>
+      <p>Home, Issues, Stories, Photo book, Submit, About, Contact 흐름을 갖고, 모바일에서는 손 안의 작은 책처럼 한 장씩 읽는 경험을 우선합니다.</p>
     </section>
   `;
 }
 
-function renderMine() {
+function renderContact() {
   return `
-    <section class="feed-screen">
-      <div class="section-heading">
-        <h1>내 사진</h1>
-        <p>내가 올린 사진과 평균 평점을 모아봅니다.</p>
-      </div>
-      ${state.myPhotos.length ? `
-        <div class="photo-list">
-          ${state.myPhotos.map((photo) => renderPhotoCard(photo, "mine")).join("")}
-        </div>
-      ` : renderEmpty("내 사진이 아직 없습니다.", "업로드 탭에서 첫 사진을 올려보세요.")}
+    <section class="text-page">
+      <p class="quiet-label">Contact</p>
+      <h1>편집실에 보내는 쪽지</h1>
+      <p>기고, 사진, 협업 문의는 Submit에서 먼저 페이지를 남겨주세요. 관리자는 제출 목록을 API에서 확인할 수 있습니다.</p>
     </section>
   `;
 }
 
-function renderUpload() {
+function renderFooter() {
   return `
-    <section class="upload-screen">
-      <div class="section-heading">
-        <h1>사진 업로드</h1>
-        <p>모바일에서 보기 좋게 자동 압축해서 저장합니다.</p>
-      </div>
-
-      <form class="panel upload-form" data-upload-form>
-        <label>
-          <span>사진 제목</span>
-          <input name="title" value="${escapeHtml(state.uploadTitle)}" maxlength="80" placeholder="예: 창가 자연광 테스트" required />
-        </label>
-
-        <label class="upload-drop">
-          <input name="photo" type="file" accept="image/*" />
-          ${state.previewUrl ? `
-            <img src="${state.previewUrl}" alt="선택한 사진 미리보기" />
-          ` : `
-            <strong>사진 선택</strong>
-            <small>앨범에서 고르거나 바로 촬영하세요.</small>
-          `}
-        </label>
-
-        <button class="primary-button" type="submit" ${state.loading ? "disabled" : ""}>
-          ${state.loading ? "업로드 중" : "업로드하기"}
-        </button>
-      </form>
-    </section>
+    <footer class="site-footer">
+      <strong>무제 (Untitled)</strong>
+      <span>Blank pages for photographs and words.</span>
+    </footer>
   `;
 }
 
-function renderPhotoCard(photo, context) {
-  const showStats = context === "mine";
-  const ratingCount = Number(photo.ratingCount || 0);
-  const averageScore = typeof photo.averageScore === "number" ? photo.averageScore.toFixed(1) : "-";
-
+function renderStoryCard(story) {
   return `
-    <article class="photo-card ${context === "feed" ? "single-card" : ""}">
-      <img class="photo-image" src="${photo.imageData}" alt="${escapeHtml(photo.title)}" />
-      <div class="photo-body">
-        <div class="photo-title-row">
-          <div>
-            <h2>${escapeHtml(photo.title)}</h2>
-            <p>${escapeHtml(photo.owner.nickname)} 작가</p>
-          </div>
-          ${showStats ? `
-            <div class="score-badge">
-              <strong>${ratingCount ? averageScore : "-"}</strong>
-              <span>${ratingCount}명</span>
-            </div>
-          ` : `
-            <div class="private-badge">
-              <strong>비공개</strong>
-              <span>평균은 작가만</span>
-            </div>
-          `}
-        </div>
-        ${showStats ? `
-          <div class="owner-note">이 평점은 내 사진 탭에서만 보입니다.</div>
-        ` : `
-          <div class="stars" aria-label="평점 선택">
-            ${[1, 2, 3, 4, 5].map((score) => `
-              <button class="${photo.myScore >= score ? "active" : ""}" data-rate-photo="${photo.id}" data-score="${score}" type="button" aria-label="${score}점">
-                ★
-              </button>
-            `).join("")}
-          </div>
-        `}
-      </div>
+    <article class="story-card">
+      <button data-open-story="${story.id}" type="button">
+        <img src="${story.coverImageUrl}" alt="${escapeHtml(story.title)}" />
+        <span>${escapeHtml(story.category)} · ${formatDate(story.createdAt)}</span>
+        <h3>${escapeHtml(story.title)}</h3>
+        <p>${escapeHtml(story.excerpt)}</p>
+      </button>
     </article>
   `;
 }
 
-function renderEmpty(title, copy) {
+function renderStoryIndexItem(story) {
   return `
-    <div class="empty-panel">
-      <strong>${escapeHtml(title)}</strong>
-      <p>${escapeHtml(copy)}</p>
-    </div>
+    <button class="story-index-item" data-open-story="${story.id}" type="button">
+      <img src="${story.coverImageUrl}" alt="${escapeHtml(story.title)}" />
+      <span>${escapeHtml(story.category)}</span>
+      <strong>${escapeHtml(story.title)}</strong>
+      <small>${escapeHtml(story.authorName)} · 조회 ${story.viewCount} · 추천 ${story.likeCount}</small>
+    </button>
   `;
 }
 
-function renderTabbar() {
+function renderPhonePage(page) {
   return `
-    <nav class="tabbar" aria-label="하단 메뉴">
-      <button class="${state.screen === "feed" ? "active" : ""}" data-screen="feed" type="button">피드</button>
-      <button class="${state.screen === "upload" ? "active" : ""}" data-screen="upload" type="button">업로드</button>
-      <button class="${state.screen === "mine" ? "active" : ""}" data-screen="mine" type="button">내 사진</button>
-    </nav>
+    <button data-view="photoBook" type="button">
+      <img src="${page.imageUrl}" alt="${escapeHtml(page.caption)}" />
+      <span>Page ${page.pageNumber}</span>
+      <strong>${escapeHtml(page.caption)}</strong>
+    </button>
   `;
+}
+
+function renderEmpty(title, copy) {
+  return `<div class="empty-state"><strong>${escapeHtml(title)}</strong><p>${escapeHtml(copy)}</p></div>`;
 }
 
 function bindEvents() {
-  document.querySelectorAll("[data-screen]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      state.screen = button.dataset.screen;
-      clearNotice();
-      if (state.screen === "mine") {
-        await refreshMyPhotos();
-      }
-      if (state.screen === "feed") {
-        await refreshPhotos();
-      }
-      render();
-    });
-  });
-
-  document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+  document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.authMode = button.dataset.authMode;
+      state.view = button.dataset.view;
+      state.mobileMenuOpen = false;
       clearNotice();
       render();
     });
   });
 
-  document.querySelector("[data-auth-form]")?.addEventListener("submit", handleAuth);
-  document.querySelector("[data-upload-form]")?.addEventListener("submit", handleUpload);
-  document.querySelector("input[name='title']")?.addEventListener("input", (e) => {
-    state.uploadTitle = e.target.value;
+  document.querySelector("[data-toggle-menu]")?.addEventListener("click", () => {
+    state.mobileMenuOpen = !state.mobileMenuOpen;
+    render();
   });
-  document.querySelector("input[type='file']")?.addEventListener("change", handleFileChange);
-  document.querySelector("[data-logout]")?.addEventListener("click", logout);
-  bindSwipeCard();
 
-  document.querySelectorAll("[data-rate-photo]").forEach((button) => {
+  document.querySelector("[data-search]")?.addEventListener("input", (event) => {
+    state.search = event.target.value;
+    render();
+  });
+
+  document.querySelectorAll("[data-open-story]").forEach((button) => {
     button.addEventListener("click", async () => {
-      await handleRate(Number(button.dataset.ratePhoto), Number(button.dataset.score));
+      const id = Number(button.dataset.openStory);
+      state.view = "stories";
+      state.selectedStoryId = id;
+      await viewStory(id).catch(() => null);
+      await refreshHome();
+      render();
+    });
+  });
+
+  document.querySelector("[data-prev-page]")?.addEventListener("click", () => {
+    state.selectedPhotoIndex = Math.max(0, state.selectedPhotoIndex - 1);
+    renderPhotoView();
+  });
+
+  document.querySelector("[data-next-page]")?.addEventListener("click", () => {
+    state.selectedPhotoIndex = Math.min(state.home.photoPages.length - 1, state.selectedPhotoIndex + 1);
+    renderPhotoView();
+  });
+
+  document.querySelector("[data-story-form]")?.addEventListener("submit", handleStorySubmit);
+  document.querySelector("[data-photo-form]")?.addEventListener("submit", handlePhotoSubmit);
+  document.querySelector("input[name='imageFile']")?.addEventListener("change", handlePhotoFile);
+
+  document.querySelectorAll("[data-like-story]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await likeStory(Number(button.dataset.likeStory));
+      await refreshHome();
+      render();
+    });
+  });
+
+  document.querySelectorAll("[data-like-photo]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await likePhotoPage(Number(button.dataset.likePhoto));
+      await refreshHome();
+      render();
     });
   });
 }
 
-async function handleAuth(event) {
+async function handleStorySubmit(event) {
   event.preventDefault();
   clearNotice();
-  state.loading = true;
-  render();
-
   const form = new FormData(event.target);
-  const payload = {
-    loginId: form.get("loginId"),
-    password: form.get("password"),
-    nickname: form.get("nickname")
-  };
+  const payload = Object.fromEntries(form.entries());
+  state.loading = true;
 
   try {
-    const result = state.authMode === "register" ? await register(payload) : await login(payload);
-    localStorage.setItem("ratingAuthToken", result.token);
-    state.user = result.user;
-    state.screen = "feed";
-    state.message = state.authMode === "register" ? "가입이 완료되었습니다." : "로그인되었습니다.";
-    await refreshPhotos();
-  } catch (error) {
-    state.error = error.message;
-  } finally {
-    state.loading = false;
-    render();
-  }
-}
-
-async function handleFileChange(event) {
-  const file = event.target.files?.[0];
-  state.selectedFile = file || null;
-  state.previewUrl = file ? await fileToDataUrl(file, 900, 0.82) : "";
-  render();
-}
-
-async function handleUpload(event) {
-  event.preventDefault();
-  clearNotice();
-
-  if (!state.previewUrl) {
-    state.error = "업로드할 사진을 선택해주세요.";
-    render();
-    return;
-  }
-
-  state.loading = true;
-  render();
-
-  const form = new FormData(event.target);
-  try {
-    await uploadPhoto({
-      title: form.get("title"),
-      imageData: state.previewUrl
+    const story = await createStory({
+      title: payload.title,
+      authorName: payload.authorName,
+      category: payload.category,
+      excerpt: payload.excerpt,
+      body: payload.body,
+      coverImageUrl: payload.coverImageUrl,
+      layoutMode: "essay"
     });
-    state.previewUrl = "";
-    state.selectedFile = null;
-    state.uploadTitle = "";
-    state.screen = "mine";
-    state.message = "사진이 올라갔습니다.";
-    await Promise.all([refreshPhotos(), refreshMyPhotos()]);
+    await createSubmission(payload);
+    await refreshHome();
+    state.selectedStoryId = story.id;
+    state.view = "stories";
+    state.message = "새 글이 무제에 저장되었습니다.";
   } catch (error) {
     state.error = error.message;
   } finally {
@@ -386,94 +466,88 @@ async function handleUpload(event) {
   }
 }
 
-async function handleRate(photoId, score) {
+async function handlePhotoSubmit(event) {
+  event.preventDefault();
   clearNotice();
+  const form = new FormData(event.target);
+  const payload = Object.fromEntries(form.entries());
+  const imageUrl = state.photoPreview || payload.imageUrl;
+
+  if (!imageUrl) {
+    state.error = "사진 파일이나 이미지 URL이 필요합니다.";
+    render();
+    return;
+  }
+
   try {
-    const updated = await ratePhoto(photoId, score);
-    state.photos = state.photos.map((photo) => photo.id === photoId ? updated : photo);
-    state.myPhotos = state.myPhotos.map((photo) => photo.id === photoId ? updated : photo);
-    state.message = `${score}점을 남겼습니다.`;
-    clampCurrentIndex();
+    await createPhotoPage({
+      title: payload.title,
+      photographer: payload.photographer,
+      caption: payload.caption,
+      pageNumber: Number(payload.pageNumber),
+      imageUrl,
+      storyText: payload.storyText
+    });
+    state.photoPreview = "";
+    await refreshHome();
+    state.selectedPhotoIndex = state.home.photoPages.length - 1;
+    state.view = "photoBook";
+    state.message = "사진 페이지가 추가되었습니다.";
   } catch (error) {
     state.error = error.message;
-  }
-  render();
-}
-
-async function refreshPhotos() {
-  state.photos = await listPhotos();
-  clampCurrentIndex();
-}
-
-async function refreshMyPhotos() {
-  state.myPhotos = await listMyPhotos();
-}
-
-function logout() {
-  localStorage.removeItem("ratingAuthToken");
-  state.user = null;
-  state.screen = "auth";
-  state.authMode = "login";
-  state.photos = [];
-  state.myPhotos = [];
-  state.currentIndex = 0;
-  state.uploadTitle = "";
-  clearNotice();
-  render();
-}
-
-function bindSwipeCard() {
-  const card = document.querySelector("[data-swipe-card]");
-  if (!card) {
-    return;
-  }
-
-  card.addEventListener("touchstart", (event) => {
-    const touch = event.touches[0];
-    state.touchStartX = touch.clientX;
-    state.touchStartY = touch.clientY;
-  }, { passive: true });
-
-  card.addEventListener("touchend", (event) => {
-    const touch = event.changedTouches[0];
-    const deltaX = touch.clientX - state.touchStartX;
-    const deltaY = touch.clientY - state.touchStartY;
-
-    if (Math.abs(deltaX) < 48 || Math.abs(deltaX) < Math.abs(deltaY)) {
-      return;
-    }
-
-    if (deltaX < 0) {
-      advanceCard();
-    } else {
-      previousCard();
-    }
-
-    clearNotice();
+  } finally {
     render();
-  }, { passive: true });
-}
-
-function getRatingQueue() {
-  return state.photos.filter((photo) => photo.myScore == null && photo.owner.id !== state.user?.id);
-}
-
-function advanceCard() {
-  const queueLength = getRatingQueue().length;
-  if (queueLength === 0) {
-    state.currentIndex = 0;
-    return;
   }
-  state.currentIndex = Math.min(state.currentIndex + 1, queueLength - 1);
 }
 
-function previousCard() {
-  state.currentIndex = Math.max(state.currentIndex - 1, 0);
+async function handlePhotoFile(event) {
+  const file = event.target.files?.[0];
+  state.photoPreview = file ? await fileToDataUrl(file, 1200, 0.84) : "";
+  render();
 }
 
-function clampCurrentIndex() {
-  const queueLength = getRatingQueue().length;
-  state.currentIndex = queueLength === 0 ? 0 : Math.min(state.currentIndex, queueLength - 1);
+async function renderPhotoView() {
+  const page = state.home.photoPages[state.selectedPhotoIndex];
+  if (page) {
+    await viewPhotoPage(page.id).catch(() => null);
+    await refreshHome();
+  }
+  render();
+}
+
+function filteredStories() {
+  const query = state.search.trim().toLowerCase();
+  if (!query) return state.home.stories || [];
+  return state.home.stories.filter((story) => {
+    return [story.title, story.authorName, story.category, story.excerpt, story.body]
+      .join(" ")
+      .toLowerCase()
+      .includes(query);
+  });
+}
+
+function isActive(menu) {
+  return state.view === viewKey(menu);
+}
+
+function viewKey(menu) {
+  const normalized = menu.toLowerCase();
+  if (normalized === "photo book") return "photoBook";
+  if (normalized === "home") return "home";
+  return normalized;
+}
+
+function paragraphs(value) {
+  return String(value || "")
+    .split(/\n+/)
+    .filter(Boolean)
+    .map((line) => `<p>${escapeHtml(line)}</p>`)
+    .join("");
+}
+
+function formatDate(value) {
+  if (!value) return "undated";
+  return new Intl.DateTimeFormat("ko-KR", { month: "short", day: "numeric" }).format(new Date(value));
 }
 
 function clearNotice() {

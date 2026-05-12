@@ -1,0 +1,135 @@
+package com.example.starter.magazine;
+
+import java.time.Instant;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Lob;
+import javax.persistence.PrePersist;
+import javax.persistence.Table;
+
+@Entity
+@Table(name = "photo_pages")
+public class PhotoPage {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String title;
+
+    @Column(nullable = false)
+    private String photographer;
+
+    @Column(nullable = false)
+    private String caption;
+
+    @Lob
+    @Column(nullable = false)
+    private String imageUrl;
+
+    @Lob
+    @Column(nullable = false)
+    private String storyText;
+
+    @Column(nullable = false)
+    private int pageNumber;
+
+    @Column(nullable = false)
+    private int viewCount;
+
+    @Column(nullable = false)
+    private int likeCount;
+
+    @Column(nullable = false)
+    private Instant createdAt;
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public String getPhotographer() {
+        return photographer;
+    }
+
+    public void setPhotographer(String photographer) {
+        this.photographer = photographer;
+    }
+
+    public String getCaption() {
+        return caption;
+    }
+
+    public void setCaption(String caption) {
+        this.caption = caption;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public String getStoryText() {
+        return storyText;
+    }
+
+    public void setStoryText(String storyText) {
+        this.storyText = storyText;
+    }
+
+    public int getPageNumber() {
+        return pageNumber;
+    }
+
+    public void setPageNumber(int pageNumber) {
+        this.pageNumber = pageNumber;
+    }
+
+    public int getViewCount() {
+        return viewCount;
+    }
+
+    public void setViewCount(int viewCount) {
+        this.viewCount = viewCount;
+    }
+
+    public int getLikeCount() {
+        return likeCount;
+    }
+
+    public void setLikeCount(int likeCount) {
+        this.likeCount = likeCount;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void incrementViews() {
+        this.viewCount += 1;
+    }
+
+    public void incrementLikes() {
+        this.likeCount += 1;
+    }
+
+    @PrePersist
+    void beforeCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
+}
