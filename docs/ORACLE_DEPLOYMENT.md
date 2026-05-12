@@ -1,10 +1,10 @@
 # Oracle Always Free Deployment
 
-This project can run on one Oracle Always Free Ampere A1 VM with Docker Compose:
+This project can run on one Oracle Always Free VM with Docker Compose:
 
 - Caddy: public HTTPS reverse proxy
 - API: Spring Boot service
-- DB: PostgreSQL with a persistent Docker volume
+- DB: PostgreSQL with a persistent Docker volume inside the Oracle VM
 
 ## Free-Tier Shape
 
@@ -64,7 +64,7 @@ Edit `infra/oracle/.env`:
 
 ```text
 POSTGRES_PASSWORD=<long-random-password>
-ALLOWED_ORIGINS=https://web-seven-iota-63.vercel.app
+ALLOWED_ORIGINS=https://<your-vercel-domain>
 API_HOST=api.<your-vm-public-ip>.sslip.io
 ```
 

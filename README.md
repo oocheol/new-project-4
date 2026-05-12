@@ -1,16 +1,16 @@
-# Han Studio Wedding Platform
+# Untitled Magazine
 
-웨딩 사진을 보고 마음에 맞는 소속 작가를 선택해 상담을 남기는 스튜디오 플랫폼입니다.
+`무제 (Untitled)`는 빈 책 위에 사진과 글을 채워가는 온라인 잡지입니다.
 
 - Frontend: Vite JavaScript single-page app
 - Backend: Spring Boot REST API
-- Database: local persistent H2 by default, PostgreSQL-ready for deployment
+- Database: local persistent H2 by default, PostgreSQL inside Oracle VM for deployment
 
 ## Product Flow
 
-1. 커플은 한 스튜디오 포트폴리오 사진을 둘러봅니다.
-2. 마음에 드는 사진이나 작가를 선택합니다.
-3. 촬영일, 선호 무드, 연락처를 남기면 상담 요청이 DB에 저장됩니다.
+1. 독자는 이슈와 스토리를 목차처럼 탐색합니다.
+2. 사진 책 뷰에서 한 장씩 넘기며 읽습니다.
+3. 작성자는 사진과 글을 제출해 새로운 페이지를 만듭니다.
 
 ## Project Map
 
@@ -39,20 +39,20 @@ cd apps/api
 gradle bootRun
 ```
 
-The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/han-studio` by default so local data persists across restarts. For PostgreSQL, set `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, and `SPRING_DATASOURCE_PASSWORD`. Render-style `postgresql://...` and `postgres://...` URLs are converted to JDBC URLs at startup.
+The frontend reads `VITE_API_BASE_URL`. The backend uses `jdbc:h2:file:./data/untitled-magazine` by default and recreates the new magazine schema. For deployment, the Oracle VM Docker stack runs PostgreSQL privately inside the VM and the Spring Boot API connects to it over the Docker network.
 
 ## Main API
 
-- `GET /api/studio`: photographers and portfolio photos
-- `GET /api/photographers`: studio photographers
-- `GET /api/portfolio`: portfolio photos
-- `POST /api/portfolio`: save a new portfolio photo URL
-- `POST /api/inquiries`: save a booking inquiry
-- `GET /api/inquiries`: saved inquiries
+- `GET /api/magazine/home`: brand info, issues, stories, photo pages
+- `POST /api/magazine/stories`: save a new story page
+- `POST /api/magazine/photo-pages`: save a new photo book page
+- `POST /api/magazine/submissions`: save a reader submission
+- `POST /api/magazine/stories/{id}/like`: like a story
+- `POST /api/magazine/photo-pages/{id}/like`: like a photo page
 
 ## Deployment
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Render, Vercel, and Supabase setup. See [docs/ORACLE_DEPLOYMENT.md](docs/ORACLE_DEPLOYMENT.md) for Oracle Always Free VM deployment.
+See [docs/ORACLE_DEPLOYMENT.md](docs/ORACLE_DEPLOYMENT.md) for Oracle VM deployment. The frontend build settings live in [vercel.json](/C:/Users/PC/Documents/New%20project%204/vercel.json).
 
 ## AI Contributor Entry Point
 
