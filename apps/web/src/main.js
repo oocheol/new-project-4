@@ -41,6 +41,7 @@ const state = {
   loading: false,
   mobileMenuOpen: false,
   photoPreview: "",
+  storyPreview: "",
   swipeStartX: 0,
   swipeStartY: 0
 };
@@ -295,7 +296,10 @@ function renderStoryForm() {
       <label><span>이름</span><input name="authorName" required /></label>
       <label><span>이메일</span><input name="email" type="email" required /></label>
       <label><span>분류</span><input name="category" value="Essay" required /></label>
-      <label><span>대표 이미지 URL</span><input name="coverImageUrl" required /></label>
+      <label class="file-drop">
+        <input name="storyImageFile" type="file" accept="image/*" />
+        ${state.storyPreview ? `<img src="${state.storyPreview}" alt="선택한 대표 이미지" />` : `<strong>대표 이미지 선택</strong><small>글과 함께 보여질 사진을 첨부하세요.</small>`}
+      </label>
       <label><span>요약</span><textarea name="excerpt" rows="3" required></textarea></label>
       <label><span>본문</span><textarea name="body" rows="8" required></textarea></label>
       <button class="primary-button" type="submit">글 저장</button>
@@ -436,6 +440,7 @@ function bindEvents() {
   document.querySelector("[data-story-form]")?.addEventListener("submit", handleStorySubmit);
   document.querySelector("[data-photo-form]")?.addEventListener("submit", handlePhotoSubmit);
   document.querySelector("input[name='imageFile']")?.addEventListener("change", handlePhotoFile);
+  document.querySelector("input[name='storyImageFile']")?.addEventListener("change", handleStoryFile);
 
   document.querySelectorAll("[data-like-story]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -516,6 +521,14 @@ async function handleStorySubmit(event) {
   clearNotice();
   const form = new FormData(event.target);
   const payload = Object.fromEntries(form.entries());
+  const coverImageUrl = state.storyPreview;
+
+  if (!coverImageUrl) {
+    state.error = "대표 이미지를 선택해주세요.";
+    render();
+    return;
+  }
+
   state.loading = true;
 
   try {
@@ -525,11 +538,19 @@ async function handleStorySubmit(event) {
       category: payload.category,
       excerpt: payload.excerpt,
       body: payload.body,
-      coverImageUrl: payload.coverImageUrl,
+      coverImageUrl,
       layoutMode: "essay"
     });
-    await createSubmission(payload);
+    await createSubmission({
+      authorName: payload.authorName,
+      email: payload.email,
+      title: payload.title,
+      category: payload.category,
+      body: payload.body,
+      imageUrl: coverImageUrl
+    });
     await refreshHome();
+    state.storyPreview = "";
     state.selectedStoryId = story.id;
     state.view = "home";
     state.message = "글이 저장되었습니다.";
@@ -578,6 +599,12 @@ async function handlePhotoSubmit(event) {
 async function handlePhotoFile(event) {
   const file = event.target.files?.[0];
   state.photoPreview = file ? await fileToDataUrl(file, 1400, 0.84) : "";
+  render();
+}
+
+async function handleStoryFile(event) {
+  const file = event.target.files?.[0];
+  state.storyPreview = file ? await fileToDataUrl(file, 1400, 0.84) : "";
   render();
 }
 
