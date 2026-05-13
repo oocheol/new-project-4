@@ -4,6 +4,16 @@
   "installCommand": "cd apps/web && npm install",
   "buildCommand": "cd apps/web && npm run build",
   "outputDirectory": "apps/web/dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "http://140.245.64.126:8080/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
   "git": {
     "deploymentEnabled": {
       "master": true
