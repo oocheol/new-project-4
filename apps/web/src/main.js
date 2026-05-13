@@ -50,6 +50,11 @@ const state = {
   loading: false,
   mobileMenuOpen: false,
   authMode: "login",
+  authDraft: {
+    nickname: "",
+    loginId: "",
+    password: ""
+  },
   user: readStoredUser(),
   photoPreview: "",
   storyPreview: "",
@@ -324,9 +329,9 @@ function renderAuthGate() {
         <button class="${isSignup ? "active" : ""}" data-auth-mode="signup" type="button">회원가입</button>
       </div>
       <form class="editor-form compact-form" data-auth-form>
-        ${isSignup ? `<label><span>닉네임</span><input name="nickname" required /></label>` : ""}
-        <label><span>아이디</span><input name="loginId" autocomplete="username" required /></label>
-        <label><span>비밀번호</span><input name="password" type="password" autocomplete="${isSignup ? "new-password" : "current-password"}" required /></label>
+        ${isSignup ? `<label><span>닉네임</span><input name="nickname" value="${escapeAttribute(state.authDraft.nickname)}" required /></label>` : ""}
+        <label><span>아이디</span><input name="loginId" value="${escapeAttribute(state.authDraft.loginId)}" autocomplete="username" required /></label>
+        <label><span>비밀번호</span><input name="password" value="${escapeAttribute(state.authDraft.password)}" type="password" autocomplete="${isSignup ? "new-password" : "current-password"}" required /></label>
         ${isSignup ? `
           <label class="file-drop">
             <input name="profileImageFile" type="file" accept="image/*" />
@@ -682,6 +687,7 @@ function handleLogout() {
 }
 
 async function handleProfileFile(event) {
+  captureAuthDraft(event.target.form);
   const file = event.target.files?.[0];
   state.profilePreview = file ? await fileToDataUrl(file, 600, 0.82) : "";
   render();
@@ -691,6 +697,17 @@ function setAuth(response) {
   localStorage.setItem(AUTH_TOKEN_KEY, response.token);
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(response.user));
   state.user = response.user;
+  state.authDraft = { nickname: "", loginId: "", password: "" };
+}
+
+function captureAuthDraft(form) {
+  if (!form) return;
+  const data = new FormData(form);
+  state.authDraft = {
+    nickname: String(data.get("nickname") || ""),
+    loginId: String(data.get("loginId") || ""),
+    password: String(data.get("password") || "")
+  };
 }
 
 async function handleStorySubmit(event) {
