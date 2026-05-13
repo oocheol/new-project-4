@@ -422,6 +422,8 @@ function bindEvents() {
   swipeArea?.addEventListener("pointerdown", handleSwipeStart);
   swipeArea?.addEventListener("pointerup", handleSwipeEnd);
   swipeArea?.addEventListener("pointercancel", resetSwipe);
+  swipeArea?.addEventListener("touchstart", handleSwipeStart, { passive: true });
+  swipeArea?.addEventListener("touchend", handleSwipeEnd);
 
   document.querySelectorAll("[data-submit-mode]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -480,17 +482,28 @@ async function movePhotoPage(direction) {
 }
 
 function handleSwipeStart(event) {
-  state.swipeStartX = event.clientX;
-  state.swipeStartY = event.clientY;
+  const point = readSwipePoint(event, "start");
+  state.swipeStartX = point.x;
+  state.swipeStartY = point.y;
 }
 
 function handleSwipeEnd(event) {
-  const deltaX = event.clientX - state.swipeStartX;
-  const deltaY = event.clientY - state.swipeStartY;
+  const point = readSwipePoint(event, "end");
+  const deltaX = point.x - state.swipeStartX;
+  const deltaY = point.y - state.swipeStartY;
   if (Math.abs(deltaX) > 48 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
     movePhotoPage(deltaX < 0 ? 1 : -1);
   }
   resetSwipe();
+}
+
+function readSwipePoint(event, phase) {
+  const touchList = phase === "end" ? event.changedTouches : event.touches;
+  const touch = touchList?.[0];
+  return {
+    x: touch?.clientX ?? event.clientX ?? 0,
+    y: touch?.clientY ?? event.clientY ?? 0
+  };
 }
 
 function resetSwipe() {
