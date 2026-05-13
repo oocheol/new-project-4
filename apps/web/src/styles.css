@@ -291,7 +291,6 @@ figure {
 }
 
 .photo-grid-section,
-.home-stories,
 .book-reader,
 .submit-page,
 .text-page {
@@ -389,10 +388,6 @@ figure {
 .tile-4,
 .tile-5 {
   grid-column: span 2;
-}
-
-.home-stories {
-  border-top: 1px solid rgba(32, 32, 30, 0.1);
 }
 
 .story-list {
@@ -881,7 +876,6 @@ figure {
   }
 
   .photo-grid-section,
-  .home-stories,
   .book-reader,
   .submit-page,
   .text-page {

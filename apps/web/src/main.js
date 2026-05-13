@@ -1,9 +1,6 @@
 import {
   createPhotoPage,
-  createStory,
-  createSubmission,
   deletePhotoPage,
-  deleteStory,
   getHealth,
   getMagazineHome,
   likePhotoPage,
@@ -12,7 +9,6 @@ import {
   setRepresentativePhoto,
   signup,
   updatePhotoPage,
-  updateStory,
   viewPhotoPage,
   viewStory
 } from "./api.js";
@@ -169,7 +165,6 @@ function renderCurrentView() {
 function renderHome() {
   const photos = sortedPhotos();
   const leadPhoto = photos[0];
-  const leadStory = latestStories()[0];
 
   return `
     <section class="home-hero">
@@ -194,25 +189,6 @@ function renderHome() {
       <div class="photo-grid">
         ${photos.slice(0, 6).map(renderPhotoTile).join("") || renderEmpty("아직 사진이 없습니다.", "Submit에서 첫 사진을 올려보세요.")}
       </div>
-    </section>
-
-    <section class="home-stories">
-      <div class="section-heading">
-        <h2>Notes</h2>
-      </div>
-      <div class="story-list">
-        ${latestStories().slice(0, 3).map(renderStoryRow).join("") || renderEmpty("아직 글이 없습니다.", "짧은 문장으로 첫 페이지를 열어보세요.")}
-      </div>
-      ${leadStory ? `
-        <article class="selected-story">
-          <img src="${storyImage(leadStory)}" alt="${escapeHtml(leadStory.title)}" />
-          <div>
-            <h3>${escapeHtml(leadStory.title)}</h3>
-            <p>${escapeHtml(leadStory.excerpt)}</p>
-            <button class="secondary-button" data-open-story="${leadStory.id}" type="button">읽기</button>
-          </div>
-        </article>
-      ` : ""}
     </section>
   `;
 }
@@ -303,15 +279,10 @@ function renderSubmit() {
     <section class="submit-page">
       <div class="submit-intro">
         <h1>Submit</h1>
-        <p>${escapeHtml(state.user.nickname)}님, 무제의 다음 페이지를 채워주세요.</p>
+        <p>${escapeHtml(state.user.nickname)}님, 사진으로 무제의 다음 페이지를 채워주세요.</p>
       </div>
 
-      <div class="submit-tabs" role="tablist" aria-label="Submit type">
-        <button class="${state.submitMode === "photo" ? "active" : ""}" data-submit-mode="photo" type="button">사진</button>
-        <button class="${state.submitMode === "story" ? "active" : ""}" data-submit-mode="story" type="button">글</button>
-      </div>
-
-      ${state.submitMode === "photo" ? renderPhotoForm() : renderStoryForm()}
+      ${renderPhotoForm()}
     </section>
   `;
 }
@@ -356,27 +327,8 @@ function renderPhotoForm() {
         ${state.photoPreview || editing?.imageUrl ? `<img src="${state.photoPreview || editing.imageUrl}" alt="선택한 사진" />` : `<strong>사진 선택</strong><small>모바일에서는 바로 촬영할 수 있습니다.</small>`}
       </label>
       <label><span>이미지 URL</span><input name="imageUrl" placeholder="파일 대신 URL도 가능" /></label>
-      <label><span>짧은 글</span><textarea name="storyText" rows="6" required>${escapeHtml(editing?.storyText || "")}</textarea></label>
+      <label><span>설명</span><textarea name="storyText" rows="6" required>${escapeHtml(editing?.storyText || "")}</textarea></label>
       <button class="primary-button" type="submit">${editing ? "사진 페이지 수정" : "사진 페이지 저장"}</button>
-      ${editing ? `<button class="secondary-button" data-cancel-edit type="button">수정 취소</button>` : ""}
-    </form>
-  `;
-}
-
-function renderStoryForm() {
-  const editing = currentEditingStory();
-  return `
-    <form class="editor-form compact-form" data-story-form>
-      <label><span>제목</span><input name="title" value="${escapeAttribute(editing?.title || "")}" required /></label>
-      ${editing ? "" : `<label><span>이메일</span><input name="email" type="email" required /></label>`}
-      <label><span>분류</span><input name="category" value="${escapeAttribute(editing?.category || "Essay")}" required /></label>
-      <label class="file-drop">
-        <input name="storyImageFile" type="file" accept="image/*" />
-        ${state.storyPreview || editing?.coverImageUrl ? `<img src="${state.storyPreview || editing.coverImageUrl}" alt="선택한 대표 이미지" />` : `<strong>대표 이미지 선택</strong><small>선택하지 않아도 글을 저장할 수 있습니다.</small>`}
-      </label>
-      <label><span>요약</span><textarea name="excerpt" rows="3" required>${escapeHtml(editing?.excerpt || "")}</textarea></label>
-      <label><span>본문</span><textarea name="body" rows="8" required>${escapeHtml(editing?.body || "")}</textarea></label>
-      <button class="primary-button" type="submit">${editing ? "글 수정" : "글 저장"}</button>
       ${editing ? `<button class="secondary-button" data-cancel-edit type="button">수정 취소</button>` : ""}
     </form>
   `;
@@ -437,10 +389,6 @@ function renderStoryDialog() {
         <div class="book-actions">
           <button class="secondary-button" data-like-story="${story.id}" type="button">추천 ${story.likeCount}</button>
           <span>조회 ${story.viewCount}</span>
-          ${owned ? `
-            <button class="secondary-button" data-edit-story="${story.id}" type="button">수정</button>
-            <button class="secondary-button" data-delete-story="${story.id}" type="button">삭제</button>
-          ` : ""}
         </div>
       </article>
     </aside>
@@ -528,18 +476,8 @@ function bindEvents() {
   swipeArea?.addEventListener("touchstart", handleSwipeStart, { passive: true });
   swipeArea?.addEventListener("touchend", handleSwipeEnd);
 
-  document.querySelectorAll("[data-submit-mode]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.submitMode = button.dataset.submitMode;
-      clearNotice();
-      render();
-    });
-  });
-
-  document.querySelector("[data-story-form]")?.addEventListener("submit", handleStorySubmit);
   document.querySelector("[data-photo-form]")?.addEventListener("submit", handlePhotoSubmit);
   document.querySelector("input[name='imageFile']")?.addEventListener("change", handlePhotoFile);
-  document.querySelector("input[name='storyImageFile']")?.addEventListener("change", handleStoryFile);
 
   document.querySelectorAll("[data-like-story]").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -555,14 +493,6 @@ function bindEvents() {
       await refreshHome();
       render();
     });
-  });
-
-  document.querySelectorAll("[data-edit-story]").forEach((button) => {
-    button.addEventListener("click", () => startEditStory(Number(button.dataset.editStory)));
-  });
-
-  document.querySelectorAll("[data-delete-story]").forEach((button) => {
-    button.addEventListener("click", () => handleDeleteStory(Number(button.dataset.deleteStory)));
   });
 
   document.querySelectorAll("[data-edit-photo]").forEach((button) => {
@@ -602,13 +532,6 @@ function bindStoryDialogEvents() {
     });
   });
 
-  document.querySelectorAll("[data-edit-story]").forEach((button) => {
-    button.addEventListener("click", () => startEditStory(Number(button.dataset.editStory)));
-  });
-
-  document.querySelectorAll("[data-delete-story]").forEach((button) => {
-    button.addEventListener("click", () => handleDeleteStory(Number(button.dataset.deleteStory)));
-  });
 }
 
 async function movePhotoPage(direction) {
@@ -710,51 +633,6 @@ function captureAuthDraft(form) {
   };
 }
 
-async function handleStorySubmit(event) {
-  event.preventDefault();
-  clearNotice();
-  const form = new FormData(event.target);
-  const payload = Object.fromEntries(form.entries());
-  const editing = currentEditingStory();
-  const coverImageUrl = state.storyPreview || editing?.coverImageUrl || "";
-
-  state.loading = true;
-
-  try {
-    const request = {
-      title: payload.title,
-      authorName: state.user.nickname,
-      category: payload.category,
-      excerpt: payload.excerpt,
-      body: payload.body,
-      coverImageUrl,
-      layoutMode: "essay"
-    };
-    const story = editing ? await updateStory(editing.id, request) : await createStory(request);
-    if (!editing) {
-      await createSubmission({
-        authorName: state.user.nickname,
-        email: payload.email,
-        title: payload.title,
-        category: payload.category,
-        body: payload.body,
-        imageUrl: coverImageUrl
-      });
-    }
-    await refreshHome();
-    state.storyPreview = "";
-    state.editingStoryId = null;
-    state.selectedStoryId = story.id;
-    state.view = "home";
-    state.message = editing ? "글이 수정되었습니다." : "글이 저장되었습니다.";
-  } catch (error) {
-    state.error = error.message;
-  } finally {
-    state.loading = false;
-    render();
-  }
-}
-
 async function handlePhotoSubmit(event) {
   event.preventDefault();
   clearNotice();
@@ -798,26 +676,6 @@ async function handlePhotoFile(event) {
   render();
 }
 
-async function handleStoryFile(event) {
-  const file = event.target.files?.[0];
-  state.storyPreview = file ? await fileToDataUrl(file, 1400, 0.84) : "";
-  render();
-}
-
-function startEditStory(id) {
-  const story = state.home.stories.find((item) => item.id === id);
-  if (!story || !isMine(story)) return;
-  state.editingStoryId = id;
-  state.editingPhotoId = null;
-  state.selectedStoryId = null;
-  state.submitMode = "story";
-  state.view = "submit";
-  state.storyPreview = "";
-  clearNotice();
-  render();
-  scrollToTop();
-}
-
 function startEditPhoto(id) {
   const photo = state.home.photoPages.find((item) => item.id === id);
   if (!photo || !isMine(photo)) return;
@@ -829,20 +687,6 @@ function startEditPhoto(id) {
   clearNotice();
   render();
   scrollToTop();
-}
-
-async function handleDeleteStory(id) {
-  if (!window.confirm("이 글을 삭제할까요?")) return;
-  try {
-    await deleteStory(id);
-    await refreshHome();
-    state.selectedStoryId = null;
-    state.message = "글이 삭제되었습니다.";
-    render();
-  } catch (error) {
-    state.error = error.message;
-    render();
-  }
 }
 
 async function handleDeletePhoto(id) {
@@ -881,16 +725,8 @@ async function renderPhotoView() {
   render();
 }
 
-function latestStories() {
-  return [...(state.home.stories || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
-
 function sortedPhotos() {
   return [...(state.home.photoPages || [])].sort((a, b) => a.pageNumber - b.pageNumber);
-}
-
-function currentEditingStory() {
-  return state.home.stories.find((story) => story.id === state.editingStoryId);
 }
 
 function currentEditingPhoto() {
