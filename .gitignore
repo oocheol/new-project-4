@@ -23,3 +23,4 @@ infra/oracle/a1-flex-ssh.pub
 !apps/api/.env.example
 
 *.log
+.vercel
