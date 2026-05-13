@@ -20,7 +20,6 @@ public class MagazineEntryRequest {
     @NotBlank
     private String body;
 
-    @NotBlank
     private String coverImageUrl;
 
     private String layoutMode;

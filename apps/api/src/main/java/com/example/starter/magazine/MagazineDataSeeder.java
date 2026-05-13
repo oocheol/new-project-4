@@ -9,14 +9,28 @@ import org.springframework.stereotype.Component;
 public class MagazineDataSeeder implements CommandLineRunner {
     private final MagazineEntryRepository entries;
     private final PhotoPageRepository photoPages;
+    private final ReaderSubmissionRepository submissions;
+    private final MagazineUserRepository users;
 
-    public MagazineDataSeeder(MagazineEntryRepository entries, PhotoPageRepository photoPages) {
+    public MagazineDataSeeder(
+            MagazineEntryRepository entries,
+            PhotoPageRepository photoPages,
+            ReaderSubmissionRepository submissions,
+            MagazineUserRepository users) {
         this.entries = entries;
         this.photoPages = photoPages;
+        this.submissions = submissions;
+        this.users = users;
     }
 
     @Override
     public void run(String... args) {
+        if (users.count() == 0) {
+            entries.deleteUserCreatedRows();
+            photoPages.deleteUserCreatedRows();
+            submissions.deleteAll();
+        }
+
         if (entries.count() == 0) {
             entries.save(entry(
                     "빈 책의 첫 문장",
@@ -78,6 +92,7 @@ public class MagazineDataSeeder implements CommandLineRunner {
         entry.setBody(body);
         entry.setCoverImageUrl(image);
         entry.setLayoutMode(layout);
+        entry.setSeeded(true);
         return entry;
     }
 
@@ -89,6 +104,7 @@ public class MagazineDataSeeder implements CommandLineRunner {
         page.setCaption(caption);
         page.setImageUrl(image);
         page.setStoryText(story);
+        page.setSeeded(true);
         return page;
     }
 }

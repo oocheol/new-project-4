@@ -4,6 +4,7 @@ async function request(path, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...authHeader(),
       ...options.headers
     },
     ...options
@@ -19,6 +20,11 @@ async function request(path, options = {}) {
   }
 
   return response.json();
+}
+
+function authHeader() {
+  const token = localStorage.getItem("untitled_auth_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 function readableError(message) {
@@ -49,6 +55,17 @@ export function createStory(payload) {
   });
 }
 
+export function updateStory(id, payload) {
+  return request(`/api/magazine/stories/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteStory(id) {
+  return request(`/api/magazine/stories/${id}`, { method: "DELETE" });
+}
+
 export function likeStory(id) {
   return request(`/api/magazine/stories/${id}/like`, { method: "POST" });
 }
@@ -64,6 +81,21 @@ export function createPhotoPage(payload) {
   });
 }
 
+export function updatePhotoPage(id, payload) {
+  return request(`/api/magazine/photo-pages/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deletePhotoPage(id) {
+  return request(`/api/magazine/photo-pages/${id}`, { method: "DELETE" });
+}
+
+export function setRepresentativePhoto(id) {
+  return request(`/api/magazine/photo-pages/${id}/representative-image`, { method: "POST" });
+}
+
 export function likePhotoPage(id) {
   return request(`/api/magazine/photo-pages/${id}/like`, { method: "POST" });
 }
@@ -77,4 +109,22 @@ export function createSubmission(payload) {
     method: "POST",
     body: JSON.stringify(payload)
   });
+}
+
+export function signup(payload) {
+  return request("/api/magazine/auth/signup", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function login(payload) {
+  return request("/api/magazine/auth/login", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export function getMe() {
+  return request("/api/magazine/auth/me");
 }

@@ -31,11 +31,20 @@ public class MagazineEntry {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
 
     @Column(nullable = false)
     private String layoutMode;
+
+    private Long ownerId;
+
+    private String ownerNickname;
+
+    @Column(columnDefinition = "TEXT")
+    private String ownerProfileImageUrl;
+
+    private Boolean seeded;
 
     @Column(nullable = false)
     private int viewCount;
@@ -96,6 +105,38 @@ public class MagazineEntry {
 
     public void setCoverImageUrl(String coverImageUrl) {
         this.coverImageUrl = coverImageUrl;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
+    }
+
+    public String getOwnerNickname() {
+        return ownerNickname;
+    }
+
+    public void setOwnerNickname(String ownerNickname) {
+        this.ownerNickname = ownerNickname;
+    }
+
+    public String getOwnerProfileImageUrl() {
+        return ownerProfileImageUrl;
+    }
+
+    public void setOwnerProfileImageUrl(String ownerProfileImageUrl) {
+        this.ownerProfileImageUrl = ownerProfileImageUrl;
+    }
+
+    public boolean isSeeded() {
+        return Boolean.TRUE.equals(seeded);
+    }
+
+    public void setSeeded(boolean seeded) {
+        this.seeded = seeded;
     }
 
     public String getLayoutMode() {

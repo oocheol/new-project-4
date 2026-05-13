@@ -7,7 +7,6 @@ public class PhotoPageRequest {
     @NotBlank
     private String title;
 
-    @NotBlank
     private String photographer;
 
     @NotBlank
